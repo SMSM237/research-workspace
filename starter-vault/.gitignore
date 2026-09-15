@@ -1,0 +1,11 @@
+# Local machine state, credentials and unfinished PDFs stay local.
+.obsidian/workspace*.json
+.obsidian/cache/
+.obsidian/plugins/obsidian-git/data.json
+Inbox/*
+!Inbox/.gitkeep
+.figure-reports/commands/
+.figure-reports/stop-request.json
+.figure-reports/*.lock
+.DS_Store
+Thumbs.db

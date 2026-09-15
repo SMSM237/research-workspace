@@ -1,0 +1,44 @@
+# Research Workspace
+
+**Obsidian 연구 대시보드 · Chat 기반 논문 분석 구성 · Android 연구 위젯**
+
+Windows PC, Mac, Android에서 같은 연구 노트를 사용하기 위한 개인 연구 환경입니다. 따뜻한 회색 바탕의 카드 대시보드에 할 일, 주간 기록, 달력, 회의 일정/회의록, 프로젝트 계획, 그래프와 논문 목록을 모았습니다.
+
+| 구성 | 버전 | 포함 내용 |
+|---|---|---|
+| 대시보드 / Figure First Reader | 0.7.3 | 설치된 플러그인이 포함된 빈 Vault, PC·모바일 홈, 전체 소스 |
+| 논문 분석 구성 | 2026.09.15 | PDF 대기열, 고정 Chat 프롬프트, Markdown 검사, Markdown/HTML 리포트, PC 요청 연결 |
+| Android 연구 위젯 | 0.3.2 | 4×2 가변 위젯 APK, Java 소스와 테스트 |
+
+## 다운로드와 시작
+
+- [전체 패키지 ZIP](https://github.com/SMSM237/research-workspace/releases/latest): 처음 설치하는 경우 선택하세요.
+- [Android APK](downloads/Research-Widget-0.3.2.apk): 기존 앱을 업데이트하거나 위젯만 설치할 때 사용합니다.
+- [대시보드 설정](dashboard/README.md) · [논문 분석기 설정](analyzer/README.md) · [위젯 설정](widget/README.md)
+
+1. 패키지에서 **starter-vault 전체 폴더**를 개인 작업 위치에 복사하세요. 숨김 폴더 `.obsidian`도 포함해야 합니다.
+2. Obsidian에서 그 폴더를 Vault로 여세요. `Dashboard` 하위 폴더를 Vault로 선택하면 플러그인과 링크가 보이지 않습니다.
+3. 커뮤니티 플러그인을 허용하고 **Figure First Reader**를 켜세요. PC는 `연구 홈 열기`, 모바일은 `모바일 홈 열기` 명령을 사용합니다.
+4. 여러 기기 동기화는 **본인의 별도 비공개 Vault 저장소**를 연결하세요. 이 공개 저장소는 소프트웨어 배포용입니다.
+5. Android는 APK 설치 후 같은 Vault 최상위 폴더를 선택하고 홈 화면에 위젯을 추가합니다. PDF 분석은 Windows PC에 분석기를 설치한 뒤 사용합니다.
+
+## 일상 사용
+
+- 할 일을 입력하고 체크합니다. 완료 항목은 그날 남고, 미완료 항목은 다음 날로 이어집니다. 달력에서 미래 날짜의 할 일도 미리 입력할 수 있습니다.
+- 연구 프로젝트를 선택해 주차별 계획을 작성합니다. 회의 일정은 수정·완료 처리하고 연결된 회의록을 작성합니다.
+- 논문 리포트는 그림과 본문을 함께 읽습니다. 모바일에서도 분석 내용은 줄이지 않습니다.
+- 위젯의 할 일/회의 탭, 완료 비율 바와 추가·열기·분석·동기화 버튼을 사용합니다.
+
+## 동기화와 분석의 범위
+
+Windows/Mac은 [Obsidian Git](https://github.com/Vinzent03/obsidian-git), Android는 [GitSync](https://github.com/ViscousPot/GitSync) 연결을 사용할 수 있습니다. Obsidian Git의 모바일 지원은 실험적입니다. 계정 인증은 각 앱에서 직접 설정하며, 이 패키지는 인증 정보를 포함하지 않습니다.
+
+논문 분석은 ChatGPT 구독 로그인과 PC에서의 Chat 조작이 필요합니다. Python이 분석 내용을 만들어 내는 것은 아닙니다. 모델 사용량 제한, 로그인, 다운로드, 생성 이미지 누락 및 Codex queue 지원 여부에 따라 확인이 필요할 수 있습니다. **무인 분석 전체 과정이 모든 환경에서 자동 완료된다는 보장은 없습니다.**
+
+위젯 버튼의 체크 효과는 요청 전달 피드백입니다. Git push나 논문 분석의 최종 완료와 구별됩니다. Inbox는 기본적으로 Git에서 제외되므로 분석할 PDF는 분석 PC의 Inbox에 준비하세요.
+
+## 검증과 공개 범위
+
+[검증 기록](docs/QA.md), [제3자 구성 요소](THIRD_PARTY_NOTICES.md), [라이선스](LICENSE)를 확인하세요. 배포 APK는 직접 설치하는 서명된 debug 빌드이며 Play Store 배포본은 아닙니다. 실기기의 런처와 절전 설정에 따라 위젯 동작이 달라질 수 있습니다.
+
+개인 논문, 원본 PDF, 실제 할 일/회의록, Chat 대화 이력, Git 인증 정보, 서명 키와 로컬 운영 상태는 포함하지 않습니다. 분석기 예제의 데이터와 그림은 명시적으로 표시된 합성 예시입니다.

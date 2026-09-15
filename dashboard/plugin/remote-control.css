@@ -1,0 +1,21 @@
+.workspace-leaf-content[data-type="paper-analysis-control"] .view-content.paper-remote {
+  background:light-dark(#eeece7,#222522);padding:24px 20px;overflow:auto;
+}
+.paper-remote .paper-remote-body{max-width:560px;margin:0 auto;color:var(--text-normal);font-size:16px;line-height:1.55;}
+.paper-remote h1{font-size:26px;line-height:1.25;font-weight:700;margin:12px 0 12px;}
+.paper-remote h2{font-size:18px;font-weight:700;margin:32px 0 14px;}
+.paper-remote .paper-remote-intro{margin:0 0 24px;color:var(--text-muted);}
+.paper-remote .paper-remote-start{display:block;width:100%;height:auto;min-height:52px;background:#26735e;color:#fff;font-size:17px;font-weight:650;box-shadow:none;border-radius:12px;padding:12px 16px;}
+.paper-remote .paper-remote-start:disabled{background:light-dark(#d5ddd7,#39463f);color:light-dark(#43554b,#dae5de);opacity:1;}
+.paper-remote .paper-remote-hint{font-size:14px;color:var(--text-muted);margin:10px 0 16px;text-align:center;}
+.paper-remote .paper-remote-sync{min-height:44px;padding:8px 16px;border-radius:10px;}
+.paper-remote button:focus-visible,.paper-remote summary:focus-visible{outline:2px solid #26735e;outline-offset:3px;}
+.paper-remote .paper-remote-record{padding:18px 0;border-bottom:1px solid var(--background-modifier-border);}
+.paper-remote .paper-remote-record-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+.paper-remote .paper-remote-record-head time{font-size:13px;font-variant-numeric:tabular-nums;color:var(--text-muted);}
+.paper-remote .paper-remote-record p{margin:8px 0 0;font-size:15px;overflow-wrap:anywhere;}
+.paper-remote .paper-remote-error{color:light-dark(#a12f2b,#ffb4aa);font-weight:600;}
+.paper-remote details{margin-top:28px;font-size:14px;color:var(--text-muted);}
+.paper-remote summary{min-height:44px;cursor:pointer;padding:10px 0;}
+body.is-mobile .workspace-leaf-content[data-type="paper-analysis-control"] .view-content.paper-remote{padding:20px 20px max(28px,env(safe-area-inset-bottom));}
+@media(max-width:380px){.paper-remote .paper-remote-record-head{gap:4px;}.paper-remote h1{font-size:24px;}}

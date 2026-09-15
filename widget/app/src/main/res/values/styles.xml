@@ -1,0 +1,8 @@
+<resources>
+ <style name="TaskEditorTheme" parent="android:style/Theme.Material.Light.Dialog.NoActionBar">
+  <item name="android:windowIsFloating">true</item><item name="android:windowBackground">@android:color/transparent</item><item name="android:windowDisablePreview">true</item><item name="android:windowAnimationStyle">@null</item><item name="android:backgroundDimAmount">0.12</item><item name="android:colorAccent">#26735E</item><item name="android:windowSoftInputMode">adjustResize|stateAlwaysVisible</item>
+ </style>
+ <style name="WidgetRelayTheme" parent="android:style/Theme.Material.Light.NoActionBar">
+  <item name="android:windowIsTranslucent">true</item><item name="android:windowBackground">@android:color/transparent</item><item name="android:windowDisablePreview">true</item><item name="android:windowAnimationStyle">@null</item><item name="android:backgroundDimEnabled">false</item>
+ </style>
+</resources>

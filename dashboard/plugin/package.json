@@ -1,0 +1,15 @@
+{
+  "name": "figure-first-reader",
+  "version": "0.7.3",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/build.mjs --policy-only && node --test test_policy.mjs test_reader_data.mjs test_annotations.mjs test_status.mjs test_dashboard.mjs test_records.mjs test_meeting.mjs test_celebration.mjs test_remote.mjs test_daily_verse.mjs"
+  },
+  "devDependencies": {
+    "obsidian": "^1.8.7",
+    "typescript": "5.8.3"
+  }
+}

@@ -1,0 +1,49 @@
+/* Same Markdown, with explicit writing surfaces in the meeting editor. */
+.rm-editor{--rm-blue:#2c649b;--rm-green:#26705a;--rm-violet:#705295;--rm-amber:#886128;display:flex;flex-direction:column;padding:0!important;min-width:0;min-height:0;font:16px/1.6 ResearchWanted,var(--font-interface);background:#eeede8;color:var(--text-normal)}
+.theme-dark .rm-editor{background:var(--background-secondary);--rm-blue:#9bc5eb;--rm-green:#9ccdb7;--rm-violet:#ceb6ec;--rm-amber:#e7c38c}
+.rm-toolbar{display:flex;align-items:center;gap:8px;flex-shrink:0;padding:12px 16px;background:var(--background-primary);border-bottom:1px solid var(--background-modifier-border);flex-wrap:wrap}
+.rm-toolbar button{min-height:40px;border-radius:8px;font:600 13px ResearchWanted,var(--font-interface)}
+.rm-save-status{flex:1;text-align:right;min-width:60px;font-size:12px;color:var(--text-muted);overflow-wrap:anywhere;line-height:1.4}.rm-save-status.is-error{color:var(--text-error)}
+.rm-scroll{overflow-y:auto;overscroll-behavior:contain;padding:20px 18px 40px;min-height:0;flex:1;scrollbar-gutter:stable both-edges}
+.rm-scroll>h1{font-size:23px;font-weight:750;line-height:1.4;margin:0 0 6px;overflow-wrap:anywhere;color:var(--text-normal)}
+.rm-meta,.rm-guide{font-size:13px;color:var(--text-muted);margin:0 0 12px;line-height:1.6}.rm-guide{margin-bottom:18px}
+.rm-card{--rm-accent:var(--rm-blue);background:var(--background-primary);border:1px solid var(--background-modifier-border);border-radius:12px;overflow:hidden;margin-bottom:14px;box-shadow:0 1px 2px #00000005}
+.rm-card[data-tone=violet]{--rm-accent:var(--rm-violet)}.rm-card[data-tone=green]{--rm-accent:var(--rm-green)}.rm-card[data-tone=amber]{--rm-accent:var(--rm-amber)}.rm-card[data-tone=neutral]{--rm-accent:var(--text-normal)}
+.rm-card-heading{display:flex;align-items:center;gap:8px;padding:12px 14px;color:var(--rm-accent);background:color-mix(in srgb,var(--rm-accent) 7%,var(--background-primary));border-bottom:1px solid var(--background-modifier-border)}
+.rm-card-heading label{font-size:16px;font-weight:700;cursor:text}.rm-card-icon{display:flex}.rm-card-icon svg{width:18px;height:18px;stroke-width:2}
+.rm-input{display:block;box-sizing:border-box;resize:vertical;width:calc(100% - 24px);max-width:calc(100% - 24px);min-width:0;min-height:100px;margin:12px;padding:10px 12px;border:1px solid var(--background-modifier-border);border-radius:7px;font:400 16px/1.65 ResearchWanted,var(--font-text);color:var(--text-normal);background-color:var(--background-primary);background-image:repeating-linear-gradient(transparent,transparent 25px,color-mix(in srgb,var(--text-muted) 10%,transparent) 25px,color-mix(in srgb,var(--text-muted) 10%,transparent) 26.4px);background-origin:content-box;box-shadow:none}
+.rm-input::placeholder{color:var(--text-muted);opacity:.85;font-size:14px}.rm-input:focus-visible{outline:2px solid var(--rm-accent);outline-offset:2px;border-color:transparent}
+.rm-add-action{margin:0 12px 12px;min-height:40px;border-radius:7px;font-size:13px;color:var(--rm-amber)}
+@media(max-width:650px){.rm-toolbar{padding:10px 12px}.rm-toolbar button,.rm-add-action{min-height:44px}.rm-scroll{padding:16px 10px max(32px,env(safe-area-inset-bottom));scrollbar-gutter:auto}.rm-scroll>h1{font-size:21px}.rm-input{font-size:16px}.rm-card-heading{padding:11px 12px}}
+/* Independent right column: gain minutes list space without stretching the middle column. */
+.rd-desktop-grid{grid-template-areas:'home home home' 'tasks weekly side' 'tasks projects side' 'calendar projects side' 'calendar graph side'}
+.rd-desktop-right{grid-area:side;display:grid;min-height:0;min-width:0;gap:12px;grid-template-rows:minmax(0,160fr) minmax(0,175fr) minmax(0,205fr);grid-template-areas:'schedules' 'meetings' 'papers'}
+.rd-module .rd-new-meeting,.rd-module .rd-new-project-button{margin-inline-start:auto;flex-shrink:0;min-height:40px;padding:6px 10px;white-space:nowrap;font-size:13px;font-weight:600}
+.rd-module:is([data-module=meetings],[data-module=projects]) .rd-module-heading{flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.rd-module:is([data-module=weekly],[data-module=projects],[data-module=graph]) .rd-body{padding-inline:0;scrollbar-gutter:stable both-edges;scrollbar-width:thin}
+.rd-module .rd-paper-row{display:flex;align-items:center;gap:10px;min-width:0;padding:7px 0;border-bottom:1px solid var(--background-modifier-border)}
+.rd-module .rd-paper-row>.rd-note-link{min-width:0;flex:1;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+.rd-module .rd-paper-row>.rd-paper-analysis{flex-shrink:0;margin:0;min-height:40px;font-size:12px;padding:4px 7px;white-space:nowrap;background:transparent;box-shadow:none}
+@container(max-width:1050px){.rd-desktop-right{display:contents}.rd-desktop-grid{grid-template-areas:'home home' 'tasks projects' 'weekly graph' 'calendar papers' 'schedules meetings'}}
+@media(max-width:650px){.rd-module .rd-new-meeting,.rd-module .rd-new-project-button,.rd-module .rd-paper-row>.rd-paper-analysis{min-height:44px}}
+
+.rd-module[data-module=weekly] .rd-week-legend{display:flex;justify-content:center;flex-wrap:wrap;gap:6px 10px}
+
+.is-phone .rm-scroll{padding-bottom:calc(24px + max(0px,var(--view-bottom-spacing,0px)))}
+/* Calendar: fill the card and keep date/count on separate baselines. */
+.rd-module[data-module=calendar] .rd-body{display:flex;flex-direction:column;gap:4px}
+.rd-module[data-module=calendar] .rd-calendar-grid{flex:1 0 auto;grid-template-rows:22px;grid-auto-rows:minmax(40px,1fr);row-gap:3px;column-gap:2px;margin:0 0 4px;align-content:stretch}
+.rd-module[data-module=calendar] .rd-calendar-weekday{align-self:center;padding:0;line-height:20px}
+.rd-module[data-module=calendar] .rd-calendar-grid button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;height:100%;min-height:40px;padding:2px 0;font-variant-numeric:tabular-nums}
+.rd-module[data-module=calendar] .rd-day-number{font-size:15px;line-height:19px}
+.rd-module[data-module=calendar] .rd-day-count{position:static;display:block;min-height:12px;font-size:10px;line-height:12px;font-weight:600;white-space:nowrap}
+.rd-module[data-module=calendar] .rd-calendar-grid button:not(:has(.rd-day-count))::after{content:'';height:12px}
+.rd-module[data-module=calendar] .rd-body>button{align-self:flex-start;flex-shrink:0}
+.rd-module[data-module=calendar] .rd-calendar-grid button:focus-visible{outline:2px solid var(--rd-accent);outline-offset:-2px}
+.is-mobile .research-home .rd-module[data-module=calendar] .rd-calendar-grid{flex:none;grid-auto-rows:46px}
+.is-mobile .research-home .rd-module[data-module=calendar] .rd-calendar-grid button{min-height:44px}
+
+.rd-module .rd-calendar-today{margin-left:auto;font-size:12px;min-height:32px;padding:4px 9px;background:transparent;box-shadow:none}
+.is-mobile .rd-module .rd-calendar-today{min-height:44px}
+.rd-module[data-module=calendar] .rd-body{gap:2px}
+.rd-module[data-module=calendar] .rd-calendar-grid{row-gap:1px;margin-bottom:0;grid-template-rows:20px}

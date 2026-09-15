@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+node_modules/
+*.test-build.cjs
+**/.gradle/
+**/build/
+local.properties
+*.jks
+*.keystore

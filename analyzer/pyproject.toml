@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "figure-first-reports"
+version = "0.2.0"
+description = "Figure-linked research report contract and deterministic local readers"
+requires-python = ">=3.11"
+dependencies = ["jsonschema>=4.23,<5", "markdown-it-py>=3,<5"]
+
+[project.optional-dependencies]
+pdf = ["PyMuPDF>=1.26,<2"]
+capture = ["markdown-it-py>=3,<5", "beautifulsoup4>=4.12,<5", "playwright>=1.48,<2"]
+test = ["pytest>=8,<10", "playwright>=1.48,<2", "PyMuPDF>=1.26,<2", "markdown-it-py>=3,<5", "beautifulsoup4>=4.12,<5"]
+
+[project.scripts]
+figure-report = "figure_reports.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+figure_reports = ["resources/*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

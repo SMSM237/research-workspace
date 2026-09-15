@@ -1,0 +1,17 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <queries><package android:name="com.viscouspot.gitsync"/><intent><action android:name="android.intent.action.VIEW"/><data android:scheme="obsidian"/></intent></queries>
+  <application android:label="연구 위젯" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:icon="@drawable/ic_paper" android:allowBackup="false" android:supportsRtl="true">
+    <activity android:name=".WidgetActionActivity" android:exported="false" android:taskAffinity="" android:excludeFromRecents="true" android:theme="@style/WidgetRelayTheme"/>
+    <activity android:name=".TaskEditorActivity" android:exported="false" android:taskAffinity="" android:excludeFromRecents="true" android:theme="@style/TaskEditorTheme" android:windowSoftInputMode="adjustResize"/>
+    <receiver android:name=".TaskActionReceiver" android:exported="false"/>
+    <service android:name=".RefreshJob" android:permission="android.permission.BIND_JOB_SERVICE" android:exported="false"/>
+    <service android:name=".TasksService" android:permission="android.permission.BIND_REMOTEVIEWS" android:exported="false"/>
+    <activity android:name=".MainActivity" android:exported="true">
+      <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
+    </activity>
+    <receiver android:name=".PaperWidget" android:exported="false">
+      <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/><action android:name="android.intent.action.DATE_CHANGED"/><action android:name="android.intent.action.TIME_SET"/><action android:name="android.intent.action.TIMEZONE_CHANGED"/></intent-filter>
+      <meta-data android:name="android.appwidget.provider" android:resource="@xml/paper_widget"/>
+    </receiver>
+  </application>
+</manifest>

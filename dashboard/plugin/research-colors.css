@@ -1,0 +1,10 @@
+/* Semantic Markdown colors. Source content and scientific images stay intact. */
+body{--research-blue:#155bb5;--research-purple:#6845a4;--research-teal:#087783;--research-mark:#8b4600;--research-mark-bg:#fff1d2;--h1-color:var(--research-blue);--h2-color:var(--research-blue);--h3-color:var(--research-blue);--h4-color:var(--research-blue);--h5-color:var(--research-blue);--h6-color:var(--research-blue);--bold-color:var(--research-purple);--italic-color:var(--research-teal)}
+body.theme-dark{--research-blue:#94bfff;--research-purple:#cbb0ff;--research-teal:#72d4d7;--research-mark:#ffd391;--research-mark-bg:#453622}
+.markdown-rendered :is(h1,h2,h3,h4,h5,h6){color:var(--research-blue);font-weight:700}
+body{--h1-weight:750;--h2-weight:720;--h3-weight:700;--h4-weight:700;--h5-weight:650;--h6-weight:650}
+.markdown-rendered h1{font-weight:750}.markdown-rendered h2{font-weight:720}
+.markdown-rendered :is(p,li,td,blockquote)>strong,.markdown-rendered :is(p,li,td,blockquote)>b{color:var(--research-purple)}
+.markdown-rendered :is(p,li,td,blockquote)>em{color:var(--research-teal)}
+.markdown-rendered mark,.cm-s-obsidian .cm-highlight{color:var(--research-mark);background:var(--research-mark-bg);padding:0 .08em;border-radius:2px}
+.figure-first-report h4{color:var(--research-blue)}

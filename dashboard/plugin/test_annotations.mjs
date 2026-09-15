@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+const require=createRequire(import.meta.url);
+const {parseNotes,serializeNotes,updateNote}=require('./annotation-data.test-build.cjs');
+const record={id:'a1',anchor:'fig-f1',quote:'한글 <script> & 원문',text:'첫 메모\n둘째 줄',created:'2026-09-09T00:00:00.000Z',updated:'2026-09-09T00:00:00.000Z',resolved:false};
+test('annotation Markdown roundtrip preserves Unicode and literal delimiters',()=>{const d={version:1,report_id:'P1',comments:[{...record,text:'```\n<!-- end -->\n한글'}]};assert.deepEqual(parseNotes(serializeNotes(d),'P1'),d);});
+test('corrupt, wrong-report and duplicate IDs are rejected',()=>{assert.throws(()=>parseNotes('broken','P1'));assert.throws(()=>parseNotes(serializeNotes({version:1,report_id:'P2',comments:[]}), 'P1'));assert.throws(()=>serializeNotes({version:1,report_id:'P1',comments:[record,record]}));});
+test('editing preserves unrelated comments and rejects stale edit',()=>{const d={version:1,report_id:'P1',comments:[record,{...record,id:'a2'}]};const n=updateNote(d,'a1','수정',true,record.updated,'2026-09-09T01:00:00.000Z');assert.equal(n.comments[0].text,'수정');assert.equal(n.comments[1].text,record.text);assert.throws(()=>updateNote(n,'a1','덮어쓰기',false,record.updated,'2026-09-09T02:00:00.000Z'));});
+test('unsafe report IDs, empty comments and excessive text are rejected',()=>{assert.throws(()=>serializeNotes({version:1,report_id:'../bad',comments:[]}));assert.throws(()=>serializeNotes({version:1,report_id:'P1',comments:[{...record,text:' '}]}));assert.throws(()=>serializeNotes({version:1,report_id:'P1',comments:[{...record,text:'x'.repeat(20001)}]}));});

@@ -1,0 +1,223 @@
+/* Native Canvas modules and their mobile Markdown equivalents. */
+.rd-module{color:var(--text-normal);font-size:16px;line-height:1.5;word-break:keep-all;overflow-wrap:anywhere;--rd-accent:#245fa8;--rd-muted:var(--text-muted);font-variant-numeric:tabular-nums}
+.theme-dark .rd-module{--rd-accent:#9cc5ff}
+.rd-module *{box-sizing:border-box}.rd-module h2{font-size:1.25em;letter-spacing:-.025em;line-height:1.3;margin:0!important;padding:0!important;border:0!important;color:var(--text-normal)!important}
+.rd-module h1{font-size:1.9em;margin:0!important;letter-spacing:-.035em}.rd-module p{margin:.3em 0 .65em;line-height:1.5}.rd-module-heading{display:flex;align-items:center;gap:9px}.rd-module-heading select{margin-left:auto}
+.rd-icon{display:flex;color:var(--rd-accent)}.rd-icon svg{width:21px;height:21px;stroke-width:1.8}.rd-subtitle{color:var(--rd-muted);font-size:.85em;margin:7px 0 18px!important}
+.rd-module button,.rd-module select,.rd-module input:not([type=checkbox]){font:inherit;min-height:40px;max-width:100%;border-radius:7px}.rd-module button{cursor:pointer;white-space:normal;line-height:1.35}.rd-module button:focus-visible,.rd-module select:focus-visible,.rd-module input:focus-visible{outline:2px solid var(--rd-accent);outline-offset:3px}
+.rd-module input::placeholder{color:var(--text-muted)}.rd-module ::selection{background:var(--text-selection)}
+.rd-module button:not(:disabled){transition:background-color 120ms ease-out,color 120ms ease-out}.rd-module button:disabled{opacity:.6;cursor:wait}
+.rd-empty{color:var(--rd-muted);font-size:.93em;padding:12px 0 18px;max-width:45ch}.rd-small{font-size:.8em;color:var(--rd-muted)}.rd-error{color:var(--text-error);border:1px solid currentColor;padding:8px;border-radius:7px;font-size:.85em}.rd-error[hidden]{display:none}
+.rd-note-link{background:transparent!important;box-shadow:none!important;border:0!important;color:var(--text-normal)!important;text-align:left;justify-content:flex-start;padding:5px 0!important;height:auto!important;font-weight:550;max-width:100%;overflow-wrap:anywhere;text-decoration:none!important}.rd-note-link:hover{color:var(--rd-accent)!important;text-decoration:underline!important;text-underline-offset:4px}
+.rd-task-row{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--background-modifier-border)}.rd-task-row input[type=checkbox]{flex-shrink:0;margin:6px 0 0;width:20px;height:20px;cursor:pointer}.rd-task-text{min-width:0;flex:1}.rd-task-meta{display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;font-size:.75em;color:var(--rd-muted)}.rd-task-meta .rd-note-link{font-weight:400;font-size:inherit;min-height:28px;padding:0!important}.rd-overdue{color:var(--text-error)}
+.rd-add-task{margin-top:16px;padding-top:12px;border-top:1px solid var(--background-modifier-border)}.rd-add-task>input{width:100%}.rd-form-row{display:flex;gap:6px;margin-top:7px;align-items:center}.rd-form-row input{min-width:0;width:45%}.rd-form-row select{min-width:0;width:35%;font-size:.8em}.rd-form-row button{margin-left:auto}.rd-new-note{display:flex;gap:7px;border-top:1px solid var(--background-modifier-border);padding-top:12px;margin-top:12px}.rd-new-note input{min-width:0;width:100%}
+.rd-week-chart{width:100%;border-collapse:collapse;margin:0!important;table-layout:fixed}.rd-week-chart td{border:0!important;text-align:center;padding:3px!important;font-size:.8em;color:var(--rd-muted)}.rd-chart-track{height:66px;display:flex;align-items:flex-end;justify-content:center;margin:5px auto;width:16px;border-radius:3px;background:var(--background-secondary)}.rd-chart-fill{width:100%;background:var(--rd-accent);border-radius:3px}.rd-chart-count{color:var(--text-normal);font-weight:600}.rd-week-totals{display:flex;gap:18px;margin:13px 0}.rd-week-totals>div{flex:1}.rd-week-totals strong{display:block;font-size:1.6em;color:var(--text-normal)!important;line-height:1.2}.rd-week-totals span{font-size:.75em;color:var(--rd-muted)}
+.rd-project-row,.rd-meeting-row,.rd-paper-row{padding:8px 0 12px;border-bottom:1px solid var(--background-modifier-border)}.rd-project-row>.rd-small{display:block}.rd-module progress{display:block;width:100%;height:6px;margin-top:9px;accent-color:var(--rd-accent)}.rd-paper-row select{margin-top:7px;font-size:.85em}.rd-connection-row{display:flex;align-items:center;gap:12px;font-size:.85em;border-bottom:1px solid var(--background-modifier-border)}.rd-connection-row .rd-note-link{flex:1}.rd-connection-row .rd-note-link+.rd-note-link:before{content:'→';padding-right:8px;color:var(--rd-muted)}
+.rd-worker{margin-top:20px;padding-top:13px;border-top:1px solid var(--background-modifier-border);font-size:.83em}.rd-worker[data-connection=disconnected] .rr-connection-dot{background:#b94747}.rd-worker[data-connection=connecting] .rr-connection-dot{background:#b18b1d}.rd-worker[data-connection=connected] .rr-connection-dot{background:#2b8a65}
+.rd-home{position:relative;padding-right:110px}.rd-home p{font-size:.9em;color:var(--rd-muted);margin-top:8px}.rd-home-actions{position:absolute;right:0;top:4px}.rd-home-actions button{background:transparent;box-shadow:none;color:var(--rd-accent)}.rd-button-icon{display:inline-flex;vertical-align:middle;margin-right:6px}.rd-button-icon svg{width:17px;height:17px}
+.rd-calendar-nav{display:flex;align-items:center;justify-content:space-between;gap:5px;margin-bottom:8px}.rd-calendar-nav button{font-size:.75em;box-shadow:none;background:transparent;padding:3px}.rd-calendar-nav strong{font-size:.95em;color:var(--text-normal)!important}.rd-calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;margin-bottom:9px}.rd-calendar-weekday{text-align:center;font-size:.75em;color:var(--rd-muted);padding:4px}.rd-calendar-grid button{position:relative;min-width:0;padding:3px;min-height:40px;font-size:.9em;background:transparent;box-shadow:none;border:1px solid transparent}.rd-calendar-grid button.rd-today{border-color:var(--rd-accent);font-weight:700}.rd-calendar-grid button[aria-pressed=true]{color:var(--text-on-accent);background:var(--rd-accent)}.rd-day-count{font-size:9px;position:absolute;right:2px;bottom:0;color:inherit;font-weight:650}.rd-date-filter{display:flex;gap:8px;align-items:center;font-size:.8em;margin-bottom:10px;color:var(--rd-accent)}.rd-date-filter button{margin-left:auto;font-size:inherit}
+.research-home{--file-line-width:1150px}.research-home .markdown-embed{border:0;padding:0}.research-home .markdown-embed-title,.research-home .markdown-embed-link{display:none}.research-home .rd-module{margin-bottom:32px;padding-bottom:25px;border-bottom:1px solid var(--background-modifier-border)}.research-home .rd-home{border:0;margin-bottom:15px}
+@media(max-width:650px){.rd-module{font-size:16px}.rd-module button,.rd-module select,.rd-module input:not([type=checkbox]){min-height:44px}.rd-calendar-grid button{min-height:44px}.rd-home{padding-right:0}.rd-home-actions{position:static}.rd-task-meta .rd-note-link{min-height:40px}.rd-form-row{flex-wrap:wrap}.rd-form-row input{width:49%}.rd-form-row select{width:48%}.rd-task-row input[type=checkbox]{width:24px;height:24px;margin-top:8px}.research-home .markdown-preview-sizer{min-width:0!important}}
+@media(prefers-reduced-motion:reduce){.rd-module button{transition:none!important}}
+
+/* Dashboard refinement: fixed cards, compact forms and daily records. */
+.rd-module h2{font-weight:750!important}.rd-module h1{font-weight:750!important}
+.canvas-node:has(.rd-module) .markdown-preview-view{overflow:hidden;padding:18px!important}
+.canvas-node:has(.rd-module) .markdown-preview-sizer{height:100%;min-height:0!important;padding-bottom:0!important;display:flex;flex-direction:column}
+.canvas-node:has(.rd-module) .markdown-preview-sizer>.el-pre{height:100%;min-height:0;margin:0!important}
+.canvas-node .rd-module{height:100%;min-height:0;display:flex;flex-direction:column}
+.rd-module-heading,.rd-subtitle,.rd-add-task,.rd-new-note,.rd-add-schedule{flex-shrink:0}
+.rd-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding-right:4px}
+.rd-subtitle{margin:5px 0 10px!important;font-size:.78em}
+.rd-simple-task{display:flex;gap:7px;margin:8px 0 0}.rd-simple-task input{min-width:0;flex:1;width:100%}
+.rd-simple-task button,.rd-new-note button,.rd-add-schedule button{flex-shrink:0;white-space:nowrap;min-width:48px;padding:5px 10px}
+.rd-add-task{padding-top:9px;margin-top:9px}.rd-new-note{margin-top:8px;padding-top:8px}
+.rd-task-row{padding:7px 0;align-items:flex-start}.rd-task-row.is-done .rd-task-label{color:var(--text-muted);text-decoration:line-through;text-decoration-thickness:1.5px}
+.rd-task-summary{font-size:.76em;color:var(--text-muted);margin-top:10px}.rd-carry-tag{font-size:.66em;border-radius:4px;color:#ae3434;background:#ae343410;padding:2px 4px;margin-left:7px;vertical-align:middle}
+.theme-dark .rd-carry-tag{color:#ffaaaa}.rd-task-row input{accent-color:var(--rd-accent)}
+.rd-daily-chart{display:flex;justify-content:space-between;gap:8px}.rd-daily-column{text-align:center;flex:1;font-size:.74em;color:var(--text-muted)}
+.rd-daily-bars{height:46px;display:flex;align-items:flex-end;justify-content:center;gap:2px;margin:5px 0}
+.rd-daily-bar{width:8px;border-radius:2px;background:#b9bec6}.rd-daily-bar.done{background:#327bc6}.rd-daily-bar.carried{background:#cc5858}.rd-complete-number{color:var(--rd-accent);font-weight:700}
+.rd-week-legend{font-size:.83em;font-weight:650;margin-top:9px}.rd-module[data-module=weekly] .rd-small{font-size:.67em}
+.rd-project-picker{width:100%;font-size:.85em!important}.rd-plan-actions{display:flex;justify-content:space-between;gap:10px;font-size:.72em;margin:0 0 6px}.rd-plan-actions button{min-height:28px}
+.rd-plan-week{border-top:1px solid var(--background-modifier-border);padding:7px 0;font-size:.85em}.rd-plan-week summary{cursor:pointer;font-weight:650}.rd-plan-week input:not([type=checkbox]){font-size:.85em}.rd-plan-week .rd-task-row{font-size:.95em}
+.rd-schedule-row{border-bottom:1px solid var(--background-modifier-border);padding:5px 0}.rd-schedule-row p{margin:0 0 5px}.rd-add-schedule{font-size:.8em;margin-top:6px}.rd-add-schedule summary{cursor:pointer}.rd-add-schedule form>input{width:100%;margin-top:6px}.rd-add-schedule .rd-form-row input{width:50%}
+.rd-paper-connection{margin-left:auto;font-size:.65em;white-space:nowrap}.rd-paper-connection button{min-height:28px;padding:3px 0;background:transparent;box-shadow:none;white-space:nowrap}
+.rd-paper-connection[data-connection=disconnected] .rr-connection-dot{background:#c54b4b}.rd-paper-connection[data-connection=connecting] .rr-connection-dot{background:#bd911c}.rd-paper-connection[data-connection=connected] .rr-connection-dot{background:#288461}
+.rd-paper-states{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.75em}.rd-paper-states select{margin:0}.rd-paper-analysis{font-size:inherit!important;box-shadow:none;background:var(--background-secondary)}
+.rd-graph-map{height:140px;position:relative;overflow:hidden}.rd-graph-map svg{width:100%;height:100%;position:absolute;inset:0}.rd-graph-map line{stroke:var(--text-faint);stroke-width:1.3}
+.rd-graph-map .rd-graph-node{position:absolute;transform:translate(-50%,-50%);max-width:46%;font-size:10px;font-weight:600;padding:5px 7px!important;min-height:30px;background:var(--background-primary)!important;border:1px solid var(--background-modifier-border)!important;border-radius:12px;text-align:center}
+.rd-module[data-module=graph] .rd-body>button{font-size:.75em;min-height:30px}
+.rd-home{padding:0!important}.rd-home-content{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.4fr);gap:28px;align-items:center;flex:1;min-height:0}.rd-home h1{font-size:1.65em!important;line-height:1.25!important}.rd-home .rd-weather{font-size:.9em;margin:7px 0 0;color:var(--text-muted)}
+.rd-weather-actions{display:flex;align-items:center;gap:9px;font-size:.63em}.rd-weather-actions button{background:transparent;box-shadow:none;min-height:24px;font-size:inherit;padding:0;color:var(--text-muted)}.rd-weather-actions a,.rd-verse-source{color:var(--text-muted)!important;text-decoration:none!important}.rd-home .rd-verse{font-size:.83em;line-height:1.5;margin:8px 0 0;color:var(--text-normal)}.rd-verse-source{font-size:.65em}
+.rd-activity-stats{display:flex;justify-content:space-between;border-bottom:1px solid var(--background-modifier-border);padding-bottom:8px;margin-bottom:12px;gap:12px}.rd-activity-stats>div{display:flex;flex-direction:column;gap:1px}.rd-activity-stats strong{font-size:1.1em!important;color:var(--text-normal)!important}.rd-activity-stats span{font-size:.66em;color:var(--text-muted)}
+.rd-activity-grid{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,1fr);grid-template-columns:repeat(53,minmax(0,1fr));gap:3px}.rd-activity-cell{aspect-ratio:1;border-radius:2px;background:var(--background-secondary)}.rd-activity-cell[data-level='1']{background:#bcd8f4}.rd-activity-cell[data-level='2']{background:#80b6ea}.rd-activity-cell[data-level='3']{background:#458ed2}.rd-activity-cell[data-level='4']{background:#1d60a8}.rd-activity>.rd-small{font-size:.63em;margin:7px 0 0}
+.research-home .rd-body{max-height:330px}.research-home .rd-home-content{display:flex;flex-direction:column;align-items:stretch}.research-home .rd-activity{margin-top:16px}
+@media(max-width:650px){.rd-home-content{grid-template-columns:1fr;gap:15px}.rd-module-heading h2{font-size:1.16em}.rd-simple-task button{min-height:44px}.rd-paper-connection button{min-height:44px}.rd-activity-grid{gap:2px}.rd-weather-actions button{min-height:36px}}
+
+.canvas-node:has(.rd-module) .markdown-preview-view{position:relative}
+.canvas-node:has(.rd-module) .markdown-preview-sizer{position:absolute;inset:14px;height:auto!important;width:auto!important;max-width:none!important;max-height:none!important}
+.rd-module[data-module=weekly] .rd-subtitle,.rd-module[data-module=graph] .rd-subtitle,.rd-module[data-module=schedules] .rd-subtitle,.rd-module[data-module=meetings] .rd-subtitle{display:none}
+.rd-module[data-module=weekly] .rd-body{padding-top:8px}.rd-module[data-module=weekly] .rd-small{font-size:.65em;margin-bottom:0}
+.rd-module[data-module=graph] .rd-body{display:flex;flex-direction:column}.rd-graph-map{flex:1;min-height:50px;height:auto}.rd-module[data-module=graph] .rd-body>button{flex-shrink:0}
+.rd-module[data-module=schedules] .rd-empty,.rd-module[data-module=meetings] .rd-empty{padding:4px 0;margin:3px 0;font-size:.78em}
+.rd-calendar-grid button{min-height:30px}.rd-calendar-nav button{min-height:30px}.rd-module[data-module=calendar] .rd-body>button{min-height:28px;font-size:.8em}
+.rd-module[data-module=projects] .rd-subtitle{display:none}.rd-module[data-module=projects] .rd-body{padding-top:8px}
+
+.rd-graph-map .rd-graph-node{width:43%;max-width:43%;line-height:1.25;white-space:normal}
+
+.rd-module[data-module=projects] .rd-body{display:flex;flex-direction:column;overflow:hidden}
+.rd-plan-top,.rd-plan-period{display:flex;gap:5px;align-items:center;flex-shrink:0}.rd-plan-top select{min-width:0;flex:1}.rd-plan-top .rd-note-link{min-width:25px;text-align:center}
+.rd-plan-top select,.rd-plan-period select,.rd-plan-period button{min-height:32px;font-size:.78em!important}.rd-plan-period select{flex:1;min-width:0;box-shadow:none;background:transparent;border:0;padding:0}.rd-plan-period button{padding:3px 5px;min-width:20px;box-shadow:none;background:transparent}
+.rd-plan-items{flex:1;min-height:0;overflow:auto;font-size:.84em}.rd-plan-input{flex-shrink:0;margin-top:5px}.rd-plan-input input,.rd-plan-input button{min-height:34px!important;font-size:.8em!important}
+.rd-new-project{font-size:.76em;flex-shrink:0;border-top:1px solid var(--background-modifier-border);padding-top:7px;margin-top:7px}.rd-new-project summary{cursor:pointer}.rd-new-project .rd-new-note{margin-top:4px;border:0;padding:0}
+.research-home .rd-module[data-module=projects] .rd-body{min-height:230px}
+
+/* Shared readable controls and persistent daily tracks. */
+.rd-module{font-size:17px}
+.rd-daily-chart{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px;min-height:71px;flex:1;align-items:stretch}
+.rd-daily-column{display:flex;flex-direction:column;align-items:center;font-size:13px;line-height:1.25;min-width:0}
+.rd-daily-track{display:flex;flex-direction:column-reverse;width:clamp(13px,55%,28px);height:54px;flex:1;min-height:30px;max-height:120px;margin:4px 0;border-radius:4px;overflow:hidden;background:var(--background-modifier-border)}
+.rd-daily-fill{width:100%;flex-shrink:0;background:#979faa}
+.rd-daily-fill.done{background:#327bc6}.rd-daily-fill.carried{background:#cc5858}
+.rd-week-legend{display:flex;flex-wrap:wrap;gap:3px 10px;font-size:13px;line-height:1.4;margin-top:3px}
+.rd-legend-item:before{content:'';display:inline-block;width:7px;height:7px;background:#979faa;border-radius:2px;margin-right:4px;vertical-align:1px}
+.rd-legend-item.done:before{background:#327bc6}.rd-legend-item.carried:before{background:#cc5858}
+.rd-module[data-module=weekly] .rd-body{display:flex;flex-direction:column;padding-top:2px}
+.rd-module .rd-graph-picker{min-width:0;max-width:115px;font-size:14px!important;height:30px;min-height:30px;padding:2px 7px}
+.rd-graph-map .rd-graph-node{font-size:13px;max-width:40%;width:auto;line-height:1.2;padding:3px 5px!important;min-height:26px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rd-graph-map:not([data-nodes="2"]) .rd-graph-node{max-width:30%}
+.rd-graph-map .rd-graph-node.is-compact{width:24px;height:24px;min-height:24px;padding:0!important;border-radius:50%;font-size:12px;line-height:24px}
+.rd-module .rd-subtitle,.rd-module .rd-small,.rd-module .rd-task-summary,.rd-module .rd-new-project,.rd-module .rd-add-schedule{font-size:13px}
+.rd-module .rd-plan-items{font-size:16px}.rd-module .rd-plan-top select,.rd-module .rd-plan-period select{font-size:15px!important}
+.rd-module .rd-plan-input input,.rd-module .rd-plan-input button{font-size:15px!important}
+.rd-module .rd-weather-actions,.rd-module .rd-verse-source,.rd-module .rd-activity-stats span,.rd-module .rd-activity>.rd-small{font-size:13px}
+.rd-module .rd-verse{font-size:15px}.rd-module .rd-paper-connection{font-size:13px}.rd-module .rd-paper-states{font-size:14px}
+.rd-module .rd-calendar-nav button,.rd-module .rd-calendar-weekday{font-size:13px}
+.rd-module .rd-simple-task input{font-size:16px}
+/* Every desktop row shares added height. Lists scroll inside their card. */
+.rd-desktop{container-type:size;overflow:auto!important;padding:14px!important;background:var(--background-secondary)}
+.rd-desktop-grid{display:grid;width:100%;height:100%;min-height:670px;gap:12px;grid-template-columns:1fr 1fr 1.05fr;grid-template-rows:minmax(0,190fr) minmax(0,160fr) minmax(0,115fr) minmax(0,105fr) minmax(0,155fr);grid-template-areas:'home home home' 'tasks weekly schedules' 'tasks projects meetings' 'calendar projects papers' 'calendar graph papers'}
+.rd-desktop-card{min-width:0;min-height:0;display:flex;flex-direction:column;padding:10px;border:1px solid var(--background-modifier-border);border-radius:12px;background:var(--background-primary);box-shadow:0 1px 3px #00000005;font-size:17px}
+.rd-desktop-card[data-card=home]{grid-area:home}.rd-desktop-card[data-card=tasks]{grid-area:tasks}.rd-desktop-card[data-card=weekly]{grid-area:weekly}.rd-desktop-card[data-card=projects]{grid-area:projects}.rd-desktop-card[data-card=graph]{grid-area:graph}.rd-desktop-card[data-card=schedules]{grid-area:schedules}.rd-desktop-card[data-card=meetings]{grid-area:meetings}.rd-desktop-card[data-card=calendar]{grid-area:calendar}.rd-desktop-card[data-card=papers]{grid-area:papers}
+.rd-desktop-card .rd-module-heading h2{font-size:20px}.rd-desktop-card .rd-module-heading{gap:7px;flex-shrink:0}
+.rd-desktop-card.rd-home{padding:14px!important}.rd-desktop-card .rd-home-content{gap:24px;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr)}.rd-desktop-card .rd-home-content h1{font-size:29px!important}
+.rd-desktop-card .rd-home .rd-weather{font-size:16px}
+.rd-desktop-card .rd-greeting{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;align-items:center}.rd-desktop-card .rd-greeting h1,.rd-desktop-card .rd-verse,.rd-desktop-card .rd-verse-source{grid-column:1/-1}.rd-desktop-card .rd-weather{margin:0;font-size:16px}.rd-desktop-card .rd-weather-actions{gap:7px}.rd-desktop-card .rd-verse{margin:3px 0 0}.rd-desktop-card .rd-activity-stats{padding-bottom:4px;margin-bottom:6px}.rd-desktop-card .rd-activity-grid{height:62px;grid-template-rows:repeat(7,minmax(0,1fr))}.rd-desktop-card .rd-activity-cell{aspect-ratio:auto}.rd-desktop-card .rd-activity>.rd-small{margin-top:5px;line-height:1.35}
+.rd-desktop-card .rd-new-project{margin-top:4px;padding-top:4px}
+.rd-desktop-card[data-card=weekly] .rd-body{overflow:auto;scrollbar-gutter:auto;padding-right:0}
+.rd-desktop-card .rd-week-legend{flex-shrink:0}
+.rd-desktop-card[data-card=calendar] .rd-subtitle{display:none}
+.rd-desktop-card .rd-calendar-grid{gap:0;margin:0}.rd-desktop-card .rd-calendar-grid button{height:25px;min-height:25px;font-size:15px}
+.rd-desktop-card .rd-calendar-nav{margin:0}.rd-desktop-card .rd-calendar-nav button,.rd-desktop-card[data-card=calendar] .rd-body>button{min-height:26px;height:26px;font-size:13px}
+.rd-desktop-card .rd-calendar-weekday{line-height:18px;padding:0}
+.rd-desktop-card[data-card=calendar] .rd-body>button{height:24px;min-height:24px}
+.rd-desktop-card .rd-new-note{margin:5px 0 0;padding-top:5px}.rd-desktop-card .rd-new-note input,.rd-desktop-card .rd-new-note button{min-height:32px;font-size:15px}
+.rd-desktop-card[data-card=meetings] .rd-empty,.rd-desktop-card[data-card=schedules] .rd-empty{font-size:14px;margin:0;padding:0;line-height:1.4}
+.rd-desktop-card[data-card=graph] .rd-graph-map{min-height:50px}.rd-desktop-card[data-card=graph] .rd-body>button{min-height:28px;font-size:13px}
+@container(max-width:1050px){.rd-desktop-grid{height:auto;min-height:100%;grid-template-columns:1fr 1fr;grid-template-rows:minmax(210px,1fr) minmax(310px,1.4fr) minmax(210px,1fr) minmax(290px,1.3fr) minmax(200px,1fr);grid-template-areas:'home home' 'tasks projects' 'weekly graph' 'calendar papers' 'schedules meetings'}.rd-desktop-card .rd-home-content{grid-template-columns:1fr 1fr}}
+@container(max-width:530px){.rd-desktop-grid{display:flex;flex-direction:column;gap:12px}.rd-desktop-card{min-height:200px;max-height:380px}.rd-desktop-card[data-card=home]{max-height:none;min-height:350px}.rd-desktop-card .rd-home-content{display:flex;flex-direction:column;align-items:stretch}.rd-desktop-card[data-card=tasks],.rd-desktop-card[data-card=projects],.rd-desktop-card[data-card=calendar]{height:330px;flex-shrink:0}}
+.research-home .rd-module[data-module=weekly] .rd-body{min-height:150px}
+.rd-paper-analysis.is-running:before{content:'';display:inline-block;width:9px;height:9px;margin-right:6px;border-radius:50%;border:2px solid var(--background-modifier-border);border-top-color:var(--rd-accent);animation:rd-analyzing 1s linear infinite}
+@keyframes rd-analyzing{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.rd-paper-analysis.is-running:before{animation:none}}
+@media(max-width:650px){.rd-module .rd-graph-picker,.rd-module .rd-plan-top select,.rd-module .rd-plan-period select,.rd-module .rd-plan-period button,.rd-module .rd-plan-input input,.rd-module .rd-plan-input button{min-height:44px!important;height:44px}}
+
+/* Mobile reader: a paper-only drawer and compact, aligned dashboard modules. */
+.rr-analyzer-status[data-connection=snapshot] .rr-connection-dot,
+.rd-paper-connection[data-connection=snapshot] .rr-connection-dot{background:#668bb4}
+.theme-dark .rr-analyzer-status[data-connection=snapshot] .rr-connection-dot,
+.theme-dark .rd-paper-connection[data-connection=snapshot] .rr-connection-dot{background:#9bbadd}
+.is-mobile .research-home .metadata-container,.is-mobile .research-home .inline-title{display:none}
+.is-mobile .research-home.markdown-preview-view{padding-inline:18px!important;padding-bottom:calc(24px + env(safe-area-inset-bottom))!important}
+.is-mobile .research-home .markdown-embed-content,.is-mobile .research-home .markdown-preview-view{padding:0!important;max-height:none}
+.is-mobile .research-home .markdown-preview-sizer{min-width:0!important;max-width:100%!important;margin:0!important;padding-bottom:0!important}
+.is-mobile .research-home .markdown-embed{margin:0!important;min-width:0}
+.is-mobile .research-home .rd-module{width:100%;min-width:0;margin:0 0 20px;padding:0 0 20px;font-size:16px}
+.is-mobile .research-home .rd-home{padding-bottom:0!important}
+.is-mobile .research-home .rd-body{max-height:350px;overflow:auto;overscroll-behavior:contain}
+.is-mobile .research-home .rd-module-heading{min-width:0;flex-wrap:wrap;gap:6px 10px}
+.is-mobile .research-home .rd-module-heading h2{font-size:21px;line-height:1.35}
+.is-mobile .research-home .rd-paper-connection{margin-left:auto;min-width:0}
+.is-mobile .research-home .rd-home-content{gap:0}
+.is-mobile .research-home .rd-activity-stats{gap:10px}
+.is-mobile .research-home button,.is-mobile .research-home select,.is-mobile .research-home input:not([type=checkbox]){min-height:44px!important}
+.is-mobile .research-home .rd-calendar-grid{gap:1px}
+.is-mobile .research-home .rd-graph-map{flex:none;min-height:220px}
+.is-mobile .rr-library{padding:16px 14px max(12px,env(safe-area-inset-bottom))!important;overflow:hidden}
+.is-mobile .rr-library>input{min-height:44px;font-size:16px}
+.is-mobile .rr-library h2{font-size:21px;font-weight:750;margin-bottom:12px}
+.is-mobile .rr-library-paper{font-size:16px;line-height:1.5;word-break:keep-all;padding:12px 8px;min-height:56px}
+.is-mobile .rr-library-list{overscroll-behavior:contain}
+.is-mobile .rr-library .rr-analyzer-status{font-size:14px;padding-top:10px}
+.is-mobile .rr-library .rr-analyzer-status p{font-size:12px;line-height:1.5}
+.is-mobile .rr-library .rr-jobs-button{font-size:13px;min-height:44px}
+
+/* One gutter per screen; embedded notes must not add a folding gutter. */
+@media(max-width:700px){
+.markdown-preview-view.research-home{--file-line-width:100%;padding-inline:18px!important}
+.research-home .markdown-embed .markdown-preview-view{padding:0!important;padding-inline:0!important;--file-margins:0px}
+.research-home .markdown-embed .markdown-preview-sizer{padding:0!important;margin:0!important;width:100%;min-width:0!important}
+.research-home .markdown-preview-sizer{max-width:100%!important;margin-inline:0!important}
+.research-home .markdown-embed-content{width:100%;padding:0!important}
+.figure-first-report.markdown-preview-view{--file-line-width:100%;font-size:16px;line-height:1.65;padding-inline:18px!important;--file-margins:0px}
+.figure-first-report .callout{padding:10px 12px;margin-block:.85em}
+.figure-first-report .callout .callout{padding-inline:9px}
+.figure-first-report .callout[data-callout=rr-body]{padding:0}
+.figure-first-report h2{font-size:1.3em;margin-top:1.8em;padding-top:1em}
+.figure-first-report h3{line-height:1.45;margin-top:1.45em}
+.figure-first-report p{line-height:1.65;margin-block:.45em .75em}
+.figure-first-report .callout-title{min-height:44px}
+.figure-first-report .table-wrapper{overflow-x:auto;max-width:100%}
+}
+.rr-has-mobile-navigation{position:relative}
+.rr-has-mobile-navigation>.markdown-preview-view{padding-bottom:calc(76px + env(safe-area-inset-bottom))!important}
+.rr-mobile-navigation{position:absolute;inset-inline:12px;bottom:max(8px,env(safe-area-inset-bottom));z-index:5;display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:4px;padding:5px;border:1px solid var(--background-modifier-border);border-radius:13px;background:var(--background-primary);box-shadow:0 2px 12px #00000012}
+.rr-mobile-navigation button{min-height:44px;min-width:0;font-size:14px;border-radius:8px;box-shadow:none;white-space:nowrap}
+.rr-mobile-navigation button:disabled{opacity:.4}
+.rr-mobile-navigation button:focus-visible,.rr-contents-entry:focus-visible{outline:2px solid var(--interactive-accent);outline-offset:2px}
+.rr-contents-modal{width:min(94vw,560px);max-height:85vh}
+.rr-contents-hint{font-size:14px;color:var(--text-muted);margin-top:0}
+.rr-contents-entry{display:block;width:100%;height:auto;min-height:44px;text-align:left;white-space:normal;padding:10px 12px;line-height:1.45;background:transparent;box-shadow:none;font-size:15px;border-radius:8px;margin:3px 0}
+.rr-contents-entry[data-level='2']{font-weight:700;color:var(--text-accent);margin-top:10px}
+.rr-contents-entry[aria-current=location]{background:var(--background-secondary)}
+@media(max-width:700px){.research-home .markdown-embed .markdown-preview-view{overflow:visible!important;max-height:none!important}.markdown-preview-view.research-home{scrollbar-gutter:stable both-edges}}
+.rr-contents-entry[data-level="2"]{color:var(--text-normal)}
+
+/* Top-level mobile padding belongs to Obsidian: --view-top-spacing-markdown
+   tracks floating headers, fullscreen and the device safe area. Only embedded
+   notes (which have no app header) remove their own padding. */
+
+/* Schedule editor: short dashboard cards retain their list and add action. */
+.rd-module[data-module=schedules] .rd-module-heading{flex-wrap:wrap;row-gap:4px;margin-bottom:6px}
+.rd-module .rd-schedule-add{margin-inline-start:auto;flex-shrink:0;min-height:40px;padding:6px 12px;white-space:nowrap;font-size:13px;font-weight:600}
+.modal.rd-schedule-modal{width:min(480px,calc(100vw - 32px));max-width:calc(100vw - 32px);max-height:calc(100dvh - 32px);padding:24px;font-family:ResearchWanted,var(--font-interface);overflow:hidden}
+.rd-schedule-modal .modal-title{font-size:20px;font-weight:700;line-height:1.4;margin-bottom:18px;padding-inline-end:24px}
+.rd-schedule-modal .modal-content{display:flex;min-height:0;overflow:hidden;margin:0}
+.rd-schedule-editor{display:flex;flex-direction:column;width:100%;min-height:0;margin:0}
+.rd-schedule-fields{min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:3px;display:flex;flex-direction:column;gap:16px}
+.rd-schedule-fields label{display:flex;flex-direction:column;gap:7px;min-width:0;font-size:14px;font-weight:600;line-height:1.4}
+.rd-schedule-modal input{display:block;box-sizing:border-box;width:100%;min-width:0;max-width:100%;height:44px;min-height:44px;padding:9px 11px;border-radius:8px;font:400 16px ResearchWanted,var(--font-interface);color:var(--text-normal);background:var(--background-primary-alt)}
+.rd-schedule-datetime{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.rd-schedule-actions{flex-shrink:0;display:flex;justify-content:flex-end;gap:8px;padding-top:16px;margin:16px 3px 0;border-top:1px solid var(--background-modifier-border)}
+.rd-schedule-actions button{min-height:44px;min-width:88px;padding:9px 16px;border-radius:8px;font:600 14px ResearchWanted,var(--font-interface);white-space:nowrap}
+.rd-schedule-modal :is(input,button):focus-visible{outline:2px solid var(--interactive-accent);outline-offset:2px}
+.rd-schedule-error{font-size:14px;line-height:1.5;color:var(--text-error);overflow-wrap:anywhere;margin:0}
+.rd-schedule-error[hidden]{display:none}
+@media(max-width:480px){.modal.rd-schedule-modal{padding:18px}.rd-schedule-actions button{flex:1}.rd-module .rd-schedule-add{min-height:44px}}
+@media(max-width:360px){.rd-schedule-datetime{grid-template-columns:minmax(0,1fr);gap:12px}}
+
+.rd-module .rd-task-edit{background:transparent;border:0;box-shadow:none;color:inherit;text-align:start;justify-content:flex-start;padding:2px 0;min-height:32px;font:inherit;line-height:1.5;height:auto;white-space:normal;overflow-wrap:anywhere;width:100%}
+.rd-module .rd-task-edit:hover{text-decoration:underline;text-underline-offset:3px}
+.rd-module .is-done .rd-task-edit{color:var(--text-muted);text-decoration:line-through}
+.rd-schedule-actions{flex-wrap:wrap}
+.rd-schedule-actions .rd-record-delete{margin-inline-end:auto;color:var(--text-error);background:transparent;box-shadow:none}
+.rd-record-help{font-size:13px;color:var(--text-muted);margin:0;line-height:1.5}
+.research-meeting{--font-text-size:16px;--h1-size:24px;--h2-size:19px;--h3-size:17px;--line-height-normal:1.6}
+@media(max-width:480px){.rd-schedule-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.rd-schedule-actions button{width:100%;min-width:0;margin:0!important;padding:9px 8px}.rd-module .rd-task-edit{min-height:40px}}
+
+/* Completion decoration is viewport-bound and never participates in card layout. */
+.rd-celebration{position:fixed;inset:0;z-index:1000;pointer-events:none;overflow:hidden;contain:strict}
+.rd-confetti{position:absolute;width:7px;height:11px;border-radius:2px;will-change:transform,opacity}
+.rd-celebration-message{position:absolute;top:max(82px,calc(env(safe-area-inset-top,0px) + 64px));left:50%;transform:translateX(-50%);max-width:calc(100% - 40px);width:max-content;padding:12px 18px;border-radius:16px;background:var(--background-primary,#fff);color:var(--text-normal,#234438);border:1px solid var(--background-modifier-border,#d4dfd8);box-shadow:0 6px 24px #153a2520;font-size:15px;font-weight:600;line-height:1.45;text-align:center}
+@media(prefers-reduced-motion:reduce){.rd-confetti{display:none}}
