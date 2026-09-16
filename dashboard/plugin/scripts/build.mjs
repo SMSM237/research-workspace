@@ -21,6 +21,7 @@ const compile=(file)=>{
   if(errors.length)throw new Error(ts.formatDiagnosticsWithColorAndContext(errors,{getCanonicalFileName:x=>x,getCurrentDirectory:()=>process.cwd(),getNewLine:()=> '\n'}));
   return result.outputText;
 };
+writeFileSync('paper-relations.test-build.cjs',compile('src/paper-relations.ts'));
 writeFileSync('daily-verse.test-build.cjs',compile('src/daily-verse.ts'));
 writeFileSync('task-celebration.test-build.cjs',compile('src/task-celebration.ts'));
 const policy=compile('src/policy.ts');
@@ -37,7 +38,7 @@ writeFileSync('remote-receiver.test-build.cjs',compile('src/remote-receiver.ts')
 if(!process.argv.includes('--policy-only')) {
   const marker='/* Research Dashboard bundled styles */';
   writeFileSync('styles.css',readFileSync('styles.css','utf8').split(marker)[0].trimEnd()+'\n'+marker+'\n'+readFileSync('dashboard.css','utf8')+'\n'+readFileSync('color-cards.css','utf8')+'\n'+readFileSync('meeting.css','utf8')+'\n'+readFileSync('remote-control.css','utf8'));
-  const names=['daily-verse','policy','reader-data','annotation-data','status-data','dashboard-data','dashboard-extras','dashboard-records','record-dialogs','meeting-data','meeting-view','task-celebration','dashboard','library','annotations','mobile-reader','remote-data','remote-receiver','remote-control','main'];
+  const names=['paper-relations','daily-verse','policy','reader-data','annotation-data','status-data','dashboard-data','dashboard-extras','dashboard-records','record-dialogs','meeting-data','meeting-view','task-celebration','dashboard','library','annotations','mobile-reader','remote-data','remote-receiver','remote-control','main'];
   const modules=names.map(name=>`${JSON.stringify('./'+name)}:(module,exports,require)=>{\n${compile('src/'+name+'.ts')}\n}`).join(',\n');
   writeFileSync('main.js',`Object.assign(exports,(()=>{const modules={${modules}};const cache={};const load=(id)=>{if(!modules[id])return require(id);if(cache[id])return cache[id].exports;const m={exports:{}};cache[id]=m;modules[id](m,m.exports,load);return m.exports;};return load('./main');})());\n`);
 }

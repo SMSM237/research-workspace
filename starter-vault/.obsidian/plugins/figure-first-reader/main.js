@@ -1,4 +1,68 @@
-Object.assign(exports,(()=>{const modules={"./daily-verse":(module,exports,require)=>{
+Object.assign(exports,(()=>{const modules={"./paper-relations":(module,exports,require)=>{
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.features = features;
+exports.paperRelations = paperRelations;
+exports.relationPositions = relationPositions;
+const topics = [
+    ['오가노이드·형태 형성', [/organoid|오가노이드/i, /morphogen|morpholog|형태|topolog|위상/i, /lumen|내강/i, /phase.field|bending|elastic|장력/i]],
+    ['종양·면역 반응', [/immunotherap|면역.?치료|checkpoint|면역.?관문/i, /t.cell|t 세포|t세포|car.t/i, /immune.evasion|면역.?회피|tnf/i, /antigen|항원|interferon|ifn[γg]|면역.?배제/i]],
+    ['약물 반응·정밀 치료', [/pharmacogen|약물.?유전체|drug.response|dose.response|약물.?반응|drug.resistan|chemoresistan/i, /personalized|precision.oncology|정밀.?치료|functional.diagnostic|기능.?진단/i, /ic50|dss|fgfr|sorafenib/i]],
+    ['섬유아세포·미세환경', [/fibroblast|섬유아세포|\bcaf\b/i, /microenvironment|미세환경|stromal|기질.?세포/i, /cd90|cd10|gpr77|thy.1/i]],
+    ['혈관·장벽', [/endothelial|내피|vascular|혈관/i, /permeability|투과|barrier|장벽|teer/i]],
+    ['환자 유래 모델', [/patient.derived|환자.?유래/i, /model.fidelity|celligner|model.repository|모델.?저장/i]],
+    ['유전체·발현 분석', [/crispr|유전자.?편집/i, /rna.seq|transcriptom|전사체|atac.seq|chromatin|크로마틴/i, /genomic|유전체|mutational|돌연변이/i]]
+];
+const norm = (s) => s.normalize('NFKC').toLowerCase().replace(/[–—−]/g, '-').replace(/[^a-z0-9가-힣α-ω]+/g, ' ').trim().replace(/\s+/g, ' ');
+const generic = new Set(['analysis', 'model', 'control', 'method', 'result', 'cell', 'cells', 'cancer', 'tumor', '분석', '모델', '세포', '연구', 'reading guide', 'figure']);
+function features(p) {
+    const title = p.title, terms = p.concepts.join(' · '), all = title + ' · ' + terms + ' · ' + p.tags.join(' · ');
+    const scores = topics.map(([name, patterns]) => ({ name, score: patterns.reduce((s, re) => s + (re.test(title) ? 3 : re.test(all) ? 1 : 0), 0) }));
+    const primary = scores.filter(x => x.score >= 2).sort((a, b) => b.score - a.score)[0]?.name || '연관 주제 미분류';
+    const keys = new Set(p.tags.map(norm).filter(s => s.length > 2 && !generic.has(s)));
+    for (const term of p.concepts) {
+        const s = norm(term);
+        if (s.length >= 4 && s.length <= 70 && !generic.has(s))
+            keys.add(s);
+    }
+    // Specific technical abbreviations remain useful across bilingual concept names.
+    for (const m of all.matchAll(/\b(?:CRISPR|PTEN|TNF|NF-κB|ATAC-seq|RNA-seq|FGFR4|CD90|GPR77|autophagy|organoid|lumen|fibroblast)\b/gi))
+        keys.add(norm(m[0]));
+    return { primary, keys, scores };
+}
+function paperRelations(papers, links = {}) {
+    const nodes = [...new Map(papers.map(p => [p.path, p])).values()].sort((a, b) => a.path.localeCompare(b.path));
+    const facts = new Map(nodes.map(p => [p.path, features(p)]));
+    const edges = [];
+    for (let i = 0; i < nodes.length; i++)
+        for (let j = i + 1; j < nodes.length; j++) {
+            const a = nodes[i], b = nodes[j], af = facts.get(a.path), bf = facts.get(b.path);
+            const explicit = !!(links[a.path]?.[b.path] || links[b.path]?.[a.path]);
+            const shared = [...af.keys].filter(k => bf.keys.has(k));
+            const sharedTopic = af.primary === bf.primary && af.primary !== '연관 주제 미분류';
+            const reasons = [...(explicit ? ['직접 노트 링크'] : []), ...(sharedTopic ? [af.primary] : []), ...shared.slice(0, 3)];
+            // A specific shared term or a multi-cue topic match; generic words never connect nodes.
+            if (explicit || shared.length || sharedTopic)
+                edges.push({ from: a.path, to: b.path, reasons, explicit });
+        }
+    return { nodes, edges, groups: new Map(nodes.map(p => [p.path, facts.get(p.path).primary])) };
+}
+/** Stable grouped grid; preserves all nodes, with nonoverlapping 44px targets. */
+function relationPositions(nodes, groups, width) {
+    const cols = Math.max(2, Math.floor((width - 24) / 54)), points = new Map(), bands = [];
+    let y = 8;
+    const names = [...new Set(nodes.map(p => groups.get(p.path)))].sort((a, b) => a === '연관 주제 미분류' ? 1 : b === '연관 주제 미분류' ? -1 : a.localeCompare(b, 'ko'));
+    for (const name of names) {
+        const group = nodes.filter(p => groups.get(p.path) === name), height = 30 + Math.ceil(group.length / cols) * 50;
+        bands.push({ name, y, height });
+        group.forEach((p, i) => points.set(p.path, { x: 26 + (i % cols) * (width - 52) / Math.max(1, cols - 1), y: y + 52 + Math.floor(i / cols) * 50 }));
+        y += height + 10;
+    }
+    return { points, bands, height: y };
+}
+
+},
+"./daily-verse":(module,exports,require)=>{
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.VERSES = void 0;
@@ -984,6 +1048,7 @@ exports.TaskCelebration = TaskCelebration;
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ResearchDashboard = void 0;
+const paper_relations_1 = require("./paper-relations");
 const daily_verse_1 = require("./daily-verse");
 const dashboard_data_1 = require("./dashboard-data");
 const task_celebration_1 = require("./task-celebration");
@@ -1000,7 +1065,7 @@ const PC = 'Dashboard/연구 홈.canvas', MOBILE = 'Dashboard/모바일 홈.md';
 const MODULES = { tasks: ['할 일', '완료는 오늘까지 · 미완료는 내일로', 'check-square'], weekly: ['이번 주 기록', '완료한 날짜를 기준으로', 'chart-no-axes-column'], projects: ['프로젝트', '프로젝트별 월간·주간 계획', 'folder-kanban'], connections: ['연결된 노트', '프로젝트·회의·논문 사이', 'network'], meetings: ['회의록', '결정과 후속 업무를 이어서', 'messages-square'], papers: ['논문', '분석과 읽기를 구분해서', 'book-open'] };
 MODULES.calendar = ['달력', '날짜별 회의와 할 일 기록', 'calendar-days'];
 MODULES.schedules = ['회의 일정', '예정된 만남과 준비', 'calendar-clock'];
-MODULES.graph = ['그래프뷰', '실제 노트의 연결', 'network'];
+MODULES.graph = ['그래프뷰', '공통 주제·개념으로 찾는 논문 연결', 'network'];
 class ResearchDashboard {
     refresh() { this.cache = null; this.listeners.forEach(fn => fn()); }
     selectDay(day) { this.selectedDay = day; this.listeners.forEach(fn => fn()); }
@@ -1012,6 +1077,7 @@ class ResearchDashboard {
         this.listeners = new Set();
         this.indexQueue = Promise.resolve();
         this.indexError = "";
+        this.profileCache = new Map();
         this.records = new dashboard_records_1.DashboardRecords(plugin.app, () => this.refresh());
         plugin.registerView(DESKTOP, leaf => new DesktopDashboard(leaf, this));
         this.extras = new dashboard_extras_1.DashboardExtras(plugin, () => this.listeners.forEach(fn => fn()));
@@ -1110,9 +1176,38 @@ class ResearchDashboard {
             new obsidian_1.Notice("논문 목록 갱신 확인 필요: " + message);
         } return null; });
     }
+    async profiles(papers) {
+        return Promise.all(papers.map(async (f) => {
+            const fm = this.app.metadataCache.getFileCache(f)?.frontmatter || {}, id = String(fm.report_id || '');
+            const base = { path: f.path, title: String(fm.library_title || f.basename), concepts: [], tags: Array.isArray(fm.tags) ? fm.tags.filter((x) => typeof x === 'string') : [] };
+            if (!/^[a-zA-Z0-9_-]+$/.test(id))
+                return { ...base, unavailable: true };
+            const path = `.figure-reports/${id}/analysis.json`;
+            try {
+                const stat = await this.app.vault.adapter.stat(path);
+                if (!stat || stat.size > 2000000)
+                    return { ...base, unavailable: true };
+                const stamp = JSON.stringify([stat.mtime, stat.size, f.stat.mtime, base.tags]), cached = this.profileCache.get(f.path);
+                if (cached?.stamp === stamp)
+                    return cached.profile;
+                const data = JSON.parse(await this.app.vault.adapter.read(path));
+                if (data.report_id !== id)
+                    throw Error('ID mismatch');
+                if (typeof data.paper?.title === 'string')
+                    base.title = data.paper.title;
+                if (Array.isArray(data.concepts))
+                    base.concepts = data.concepts.slice(0, 300).flatMap((c) => [c?.term, c?.english].filter(x => typeof x === 'string').map(x => x.slice(0, 300)));
+                this.profileCache.set(f.path, { stamp, profile: base });
+                return base;
+            }
+            catch {
+                return { ...base, unavailable: true };
+            }
+        }));
+    }
     snapshot() {
         if (!this.cache)
-            this.cache = (async () => { const files = this.app.vault.getMarkdownFiles(); const papers = files.filter(f => f.path.startsWith('Papers/') && this.app.metadataCache.getFileCache(f)?.frontmatter?.report_id); const paperIndex = await this.syncPaperIndex(papers); const sources = files.filter(f => (0, dashboard_data_3.taskSource)(f.path)); const contents = await Promise.all(sources.map(async (f) => [f.path, await this.app.vault.cachedRead(f)])); const reading = this.app.vault.getAbstractFileByPath(dashboard_data_3.READING); return { tasks: contents.flatMap(([p, t]) => (0, dashboard_data_3.parseTasks)(p, t)), projects: files.filter(f => f.path.startsWith('Projects/') && !f.path.startsWith('Projects/Plans/') && this.app.metadataCache.getFileCache(f)?.frontmatter?.dashboard_example !== true).sort((a, b) => a.basename.localeCompare(b.basename, 'ko')), schedules: files.filter(f => f.path.startsWith('Meetings/Schedule/')), meetings: files.filter(f => f.path.startsWith('Meetings/') && !f.path.startsWith('Meetings/Schedule/')).sort((a, b) => b.basename.localeCompare(a.basename, 'ko')), papers, paperIndex, reading: reading instanceof obsidian_1.TFile ? await this.app.vault.cachedRead(reading) : '' }; })();
+            this.cache = (async () => { const files = this.app.vault.getMarkdownFiles(); const papers = files.filter(f => f.path.startsWith('Papers/') && this.app.metadataCache.getFileCache(f)?.frontmatter?.report_id); const paperIndex = await this.syncPaperIndex(papers); const sources = files.filter(f => (0, dashboard_data_3.taskSource)(f.path)); const contents = await Promise.all(sources.map(async (f) => [f.path, await this.app.vault.cachedRead(f)])); const reading = this.app.vault.getAbstractFileByPath(dashboard_data_3.READING); return { tasks: contents.flatMap(([p, t]) => (0, dashboard_data_3.parseTasks)(p, t)), projects: files.filter(f => f.path.startsWith('Projects/') && !f.path.startsWith('Projects/Plans/') && this.app.metadataCache.getFileCache(f)?.frontmatter?.dashboard_example !== true).sort((a, b) => a.basename.localeCompare(b.basename, 'ko')), schedules: files.filter(f => f.path.startsWith('Meetings/Schedule/')), meetings: files.filter(f => f.path.startsWith('Meetings/') && !f.path.startsWith('Meetings/Schedule/')).sort((a, b) => b.basename.localeCompare(a.basename, 'ko')), papers, paperIndex, profiles: await this.profiles(papers), reading: reading instanceof obsidian_1.TFile ? await this.app.vault.cachedRead(reading) : '' }; })();
         return this.cache;
     }
     async ensureFolder(path) { let parent = ''; for (const part of path.split('/')) {
@@ -1175,7 +1270,7 @@ class ModuleView extends obsidian_1.MarkdownRenderChild {
         this.dashboard = dashboard;
         this.kind = kind;
         this.month = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-        this.graphLayout = 'circle';
+        this.graphLayout = 'related';
         this.lastSelectedDay = '';
         this.projectPath = '';
         this.selectedWeek = '';
@@ -1190,7 +1285,7 @@ class ModuleView extends obsidian_1.MarkdownRenderChild {
         const saved = this.dashboard.app.loadLocalStorage('research-dashboard-view') || {};
         if (typeof saved.project === 'string')
             this.projectPath = saved.project;
-        if (['circle', 'hierarchy', 'free'].includes(saved.graph))
+        if (saved.graphVersion === 2 && ['related', 'circle', 'hierarchy', 'free'].includes(saved.graph))
             this.graphLayout = saved.graph;
         const root = this.containerEl;
         root.empty();
@@ -1237,7 +1332,7 @@ class ModuleView extends obsidian_1.MarkdownRenderChild {
             h.createDiv({ cls: 'rd-paper-connection' });
         if (this.kind === 'graph') {
             const pick = h.createEl('select', { cls: 'rd-graph-picker', attr: { 'aria-label': '그래프 배치 형태' } });
-            for (const [value, text] of [['circle', '원형'], ['hierarchy', '계층형'], ['free', '자유 배치']])
+            for (const [value, text] of [['related', '연관 묶음'], ['circle', '원형'], ['hierarchy', '계층형'], ['free', '자유 배치']])
                 pick.createEl('option', { value, text });
             pick.value = this.graphLayout;
             pick.onchange = () => { this.graphLayout = pick.value; this.saveView(); void this.render(); };
@@ -1270,7 +1365,7 @@ class ModuleView extends obsidian_1.MarkdownRenderChild {
             this.registerInterval(window.setInterval(() => void this.renderWorker(), 5000));
     }
     onunload() { this.alive = false; this.ticket++; this.projectResize?.disconnect(); }
-    saveView() { const previous = this.dashboard.app.loadLocalStorage('research-dashboard-view') || {}; this.dashboard.app.saveLocalStorage('research-dashboard-view', { ...previous, ...(this.kind === 'projects' ? { project: this.projectPath } : { graph: this.graphLayout }) }); }
+    saveView() { const previous = this.dashboard.app.loadLocalStorage('research-dashboard-view') || {}; this.dashboard.app.saveLocalStorage('research-dashboard-view', { ...previous, ...(this.kind === 'projects' ? { project: this.projectPath } : { graph: this.graphLayout, graphVersion: 2 }) }); }
     async act(fn) { try {
         this.error.hidden = true;
         await fn();
@@ -1512,71 +1607,100 @@ class ModuleView extends obsidian_1.MarkdownRenderChild {
         const form = this.body.createEl('form', { cls: 'rd-simple-task rd-plan-input' }), input = form.createEl('input', { type: 'text', placeholder: '이번 주 할 일', attr: { 'aria-label': w.heading + ' 할 일', maxlength: '500', required: 'true' } }), add = form.createEl('button', { type: 'submit', text: '추가' });
         form.onsubmit = e => { e.preventDefault(); add.disabled = true; void this.act(() => this.dashboard.addPlan(file, w.heading, input.value)).finally(() => add.disabled = false); };
     }
-    renderGraph(s) {
-        const nodes = (0, dashboard_data_1.graphFiles)([...(s.paperIndex ? [s.paperIndex] : []), ...s.projects, ...s.meetings, ...s.papers]), paths = new Set(nodes.map(f => f.path));
+    renderGraph(s, target = this.body, expanded = false) {
+        const model = (0, paper_relations_1.paperRelations)(s.profiles, this.dashboard.app.metadataCache.resolvedLinks), nodes = model.nodes;
         if (!nodes.length) {
-            this.empty('논문·프로젝트·회의록을 등록하면 연결이 표시됩니다.');
+            target.createEl('p', { cls: 'rd-empty', text: '분석한 논문이 등록되면 공통 주제별로 표시됩니다.' });
             return;
         }
-        const edges = [];
-        for (const [from, targets] of Object.entries(this.dashboard.app.metadataCache.resolvedLinks))
-            if (paths.has(from))
-                for (const to of Object.keys(targets))
-                    if (paths.has(to) && from !== to)
-                        edges.push([from, to]);
         const head = this.containerEl.querySelector('.rd-module-heading');
-        if (!head.querySelector('.rd-network-expand')) {
-            const expand = head.createEl('button', { cls: 'rd-network-expand', attr: { type: 'button', 'aria-label': '전체 그래프 크게 열기', title: '전체 그래프 크게 열기' } });
+        if (!expanded && !head.querySelector('.rd-network-expand')) {
+            const expand = head.createEl('button', { cls: 'rd-network-expand', attr: { type: 'button', 'aria-label': '논문 연결 크게 보기', title: '논문 연결 크게 보기' } });
             (0, obsidian_1.setIcon)(expand, 'expand');
-            expand.onclick = () => void this.act(async () => { const leaf = this.dashboard.app.workspace.getRightLeaf(false); if (leaf) {
-                await leaf.setViewState({ type: 'graph', active: true });
-                await this.dashboard.app.workspace.revealLeaf(leaf);
-                this.dashboard.app.workspace.rightSplit.setSize(Math.min(680, window.innerWidth * .5));
-            } });
+            expand.onclick = () => { const modal = new obsidian_1.Modal(this.dashboard.app); modal.titleEl.textContent = '논문 사이의 연결'; modal.contentEl.classList.add('rd-relation-expanded', 'rd-module'); modal.open(); this.renderGraph(s, modal.contentEl, true); };
         }
-        const map = this.body.createDiv({ cls: 'rd-network-map', attr: { role: 'group', 'aria-label': `논문 ${s.papers.length}편을 포함한 ${nodes.length}개 문서 연결` } });
+        const status = target.createDiv({ cls: 'rd-relation-status', text: `논문 ${nodes.length}편 · 공통 주제 연결 ${model.edges.length}개` });
+        status.title = '점 선택: 리포트 열기 · 점에 마우스 또는 키보드 초점: 연결 이유 확인';
+        const map = target.createDiv({ cls: 'rd-network-map rd-relation-map', attr: { role: 'group', 'aria-label': '공통 주제에 따른 논문 연결. 점을 누르면 리포트가 열립니다.' } });
         map.dataset.nodes = String(nodes.length);
         map.dataset.layout = this.graphLayout;
+        const plane = map.createDiv({ cls: 'rd-relation-plane' }), width = Math.max(230, map.clientWidth || 300);
+        const layout = (0, paper_relations_1.relationPositions)(nodes, model.groups, width);
+        if (this.graphLayout !== 'related') {
+            const other = (0, dashboard_data_3.graphPositions)(nodes.map(n => n.path), model.edges.map(e => [e.from, e.to]), this.graphLayout);
+            layout.height = Math.max(260, Math.ceil(nodes.length / 6) * 75);
+            layout.bands = [];
+            for (const [id, p] of other)
+                layout.points.set(id, { x: 24 + p.x / 300 * (width - 48), y: 24 + p.y / 150 * (layout.height - 48) });
+        }
+        plane.style.height = layout.height + 'px';
+        const names = [...new Set(model.groups.values())].sort(), colors = ['#337b72', '#8561a6', '#316c9e', '#a56438', '#727b32', '#9b537b', '#576579', '#687878'];
+        const color = (path) => colors[names.indexOf(model.groups.get(path)) % colors.length];
+        for (const band of layout.bands) {
+            const region = plane.createDiv({ cls: 'rd-relation-band' });
+            region.style.top = band.y + 'px';
+            region.style.height = band.height + 'px';
+            region.createSpan({ text: band.name });
+        }
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('viewBox', '0 0 300 150');
+        svg.setAttribute('viewBox', `0 0 ${width} ${layout.height}`);
         svg.setAttribute('preserveAspectRatio', 'none');
         svg.setAttribute('aria-hidden', 'true');
-        map.append(svg);
-        const hub = s.paperIndex?.path;
-        const pos = (0, dashboard_data_3.graphPositions)(nodes.map(f => f.path), edges, this.graphLayout);
-        if (this.graphLayout === 'circle' && hub) {
-            const ring = (0, dashboard_data_3.graphPositions)(nodes.filter(f => f.path !== hub).map(f => f.path), edges, 'circle');
-            for (const [key, value] of ring)
-                pos.set(key, value);
-            pos.set(hub, { x: 150, y: 75 });
-        }
-        for (const [from, to] of edges) {
-            const a = pos.get(from), b = pos.get(to);
-            const line = document.createElementNS(svg.namespaceURI, 'path');
-            line.setAttribute('d', `M ${a.x} ${a.y} Q ${(a.x + b.x) / 2} ${(a.y + b.y) / 2 - 7} ${b.x} ${b.y}`);
-            line.setAttribute('data-from', from);
-            line.setAttribute('data-to', to);
+        plane.append(svg);
+        for (const edge of model.edges) {
+            const a = layout.points.get(edge.from), b = layout.points.get(edge.to), line = document.createElementNS(svg.namespaceURI, 'path');
+            line.setAttribute('d', `M ${a.x} ${a.y} Q ${(a.x + b.x) / 2} ${(a.y + b.y) / 2 - 12} ${b.x} ${b.y}`);
+            line.setAttribute('data-from', edge.from);
+            line.setAttribute('data-to', edge.to);
+            line.classList.toggle('is-explicit', edge.explicit);
             svg.append(line);
         }
-        const caption = this.body.createEl('button', { cls: 'rd-network-caption', attr: { type: 'button' } }), kind = caption.createSpan({ cls: 'rd-network-kind' }), title = caption.createSpan({ cls: 'rd-network-title' }), arrow = caption.createSpan({ cls: 'rd-network-arrow', attr: { 'aria-hidden': 'true' } });
+        const caption = target.createEl('button', { cls: 'rd-network-caption', attr: { type: 'button' } }), kind = caption.createSpan({ cls: 'rd-network-kind' }), title = caption.createSpan({ cls: 'rd-network-title' }), arrow = caption.createSpan({ cls: 'rd-network-arrow', attr: { 'aria-hidden': 'true' } });
         (0, obsidian_1.setIcon)(arrow, 'arrow-up-right');
-        const select = (file) => { this.graphSelected = file.path; const isHub = file.path === hub; kind.textContent = isHub ? `논문 ${s.papers.length}편 · 연결된 문서 ${nodes.length}개` : file.path.startsWith('Papers/') ? '논문' : file.path.startsWith('Projects/') ? '프로젝트' : '회의록'; title.textContent = isHub ? '분석한 논문 모두 보기' : String(this.dashboard.app.metadataCache.getFileCache(file)?.frontmatter?.library_title || file.basename); caption.title = title.textContent; caption.setAttribute('aria-label', title.textContent + ' 열기'); caption.onclick = () => void this.act(() => this.dashboard.open(file.path)); for (const node of Array.from(map.querySelectorAll('.rd-network-node')))
-            node.setAttribute('aria-pressed', String(node.dataset.path === file.path)); for (const line of Array.from(svg.querySelectorAll('path')))
-            line.classList.toggle('is-active', line.dataset.from === file.path || line.dataset.to === file.path); };
+        const detail = target.createDiv({ cls: 'rd-relation-detail' });
+        if (!expanded)
+            detail.hidden = true;
+        const open = (path) => void this.act(async () => { if (expanded) {
+            target.closest('.modal-container')?.querySelector('.modal-close-button')?.click();
+        } await this.dashboard.open(path); });
+        const select = (file) => {
+            this.graphSelected = file.path;
+            const related = model.edges.filter(e => e.from === file.path || e.to === file.path);
+            kind.textContent = `${model.groups.get(file.path)} · 연결 ${related.length}편`;
+            title.textContent = String(this.dashboard.app.metadataCache.getCache(file.path)?.frontmatter?.library_title || file.title);
+            caption.title = title.textContent;
+            caption.setAttribute('aria-label', title.textContent + ' 리포트 열기');
+            caption.onclick = () => open(file.path);
+            detail.empty();
+            detail.createSpan({ cls: 'rd-relation-disclaimer', text: '공통 주제·개념 기반 추정 · 인용/기전 관계 아님' });
+            if (file.unavailable)
+                detail.createDiv({ text: '개념 자료를 읽지 못해 제목·태그만 사용했습니다.' });
+            if (!related.length)
+                detail.createDiv({ text: '현재 기준으로 연결되는 논문이 없습니다.' });
+            for (const edge of related) {
+                const other = nodes.find(n => n.path === (edge.from === file.path ? edge.to : edge.from));
+                const row = detail.createEl('button', { cls: 'rd-related-paper', attr: { type: 'button' } });
+                row.createSpan({ text: other.title });
+                row.createEl('small', { text: edge.reasons.join(' · ') });
+                row.onclick = () => open(other.path);
+            }
+            for (const node of Array.from(plane.querySelectorAll('.rd-network-node')))
+                node.setAttribute('aria-pressed', String(node.dataset.path === file.path));
+            for (const line of Array.from(svg.querySelectorAll('path')))
+                line.classList.toggle('is-active', line.dataset.from === file.path || line.dataset.to === file.path);
+        };
         for (const file of nodes) {
-            const point = pos.get(file.path), isHub = file.path === hub, type = isHub ? 'hub' : file.path.startsWith('Papers/') ? 'paper' : file.path.startsWith('Projects/') ? 'project' : 'meeting';
-            const node = map.createEl('button', { cls: 'rd-network-node is-' + type, attr: { type: 'button', 'aria-label': file.basename, title: file.basename, 'aria-pressed': 'false' } });
+            const point = layout.points.get(file.path), node = plane.createEl('button', { cls: 'rd-network-node is-paper', attr: { type: 'button', 'aria-label': file.title + ' 리포트 열기', title: file.title, 'aria-pressed': 'false' } });
             node.dataset.path = file.path;
-            node.style.left = point.x / 3 + '%';
-            node.style.top = point.y / 1.5 + '%';
-            const dot = node.createSpan({ cls: 'rd-network-dot', attr: { 'aria-hidden': 'true' } });
-            if (isHub)
-                (0, obsidian_1.setIcon)(dot, 'book-open');
-            node.onclick = () => select(file);
+            node.style.left = point.x / width * 100 + '%';
+            node.style.top = point.y + 'px';
+            node.style.setProperty('--relation-color', color(file.path));
+            node.createSpan({ cls: 'rd-network-dot', attr: { 'aria-hidden': 'true' } });
+            node.onclick = () => { select(file); open(file.path); };
             node.onfocus = () => select(file);
             node.onmouseenter = () => select(file);
         }
-        select(nodes.find(f => f.path === this.graphSelected) || s.paperIndex || nodes[0]);
+        select(nodes.find(f => f.path === this.graphSelected) || nodes[0]);
     }
     async renderHome() {
         const ticket = ++this.ticket;

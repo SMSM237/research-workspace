@@ -326,3 +326,30 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
 /* Obsidian's 16px check glyph must follow the actual 20/22px input, not the theme offset. */
 .rd-module .rd-task-row input[type=checkbox]::after{inset:auto!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;width:100%!important;height:100%!important;margin:0!important;}
+
+/* Paper relationship discovery: grouped topics, direct report actions. */
+.rd-relation-status{font-size:11px;color:var(--text-muted);padding:0 2px 4px;flex:none;}
+.rd-module .rd-relation-map{overflow:auto!important;min-height:100px!important;max-height:none;flex:1 1 auto;}
+.rd-relation-plane{position:relative;width:100%;min-width:230px;isolation:isolate;}
+.rd-relation-plane>svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;}
+.rd-relation-band{position:absolute;left:0;right:0;border-radius:14px;background:rgba(255,255,255,.55);border:1px solid rgba(90,80,115,.09);}
+.rd-relation-band>span{display:block;padding:8px 12px;font-size:12px;font-weight:600;color:#50546c;}
+.rd-module .rd-relation-plane .rd-network-node{width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;z-index:2;}
+.rd-relation-plane .rd-network-dot{width:13px;height:13px;background:var(--relation-color);}
+.rd-relation-plane path{stroke-dasharray:3 3;opacity:.2;}
+.rd-relation-plane path.is-explicit{stroke-dasharray:none;}
+.rd-relation-plane path.is-active{opacity:.9;stroke:#6976a0;stroke-width:1.4;}
+.rd-relation-detail{max-height:74px;overflow:auto;flex:0 0 auto;font-size:11px;color:var(--text-muted);}
+.rd-relation-disclaimer{display:block;padding:3px 2px;}
+.rd-module .rd-related-paper{display:flex;flex-direction:column;align-items:stretch;text-align:left;width:100%;height:auto;min-height:44px;padding:6px 8px;margin:2px 0;background:var(--background-primary);white-space:normal;box-shadow:none;}
+.rd-related-paper>span{font-size:12px;line-height:1.4;}.rd-related-paper>small{font-size:11px;color:var(--text-muted);line-height:1.4;}
+.rd-relation-expanded{height:min(78vh,800px);display:flex;flex-direction:column;gap:8px;}
+.rd-relation-expanded .rd-relation-detail{max-height:150px;}
+.research-home .rd-relation-map{height:240px!important;min-height:240px!important;}
+.theme-dark .rd-relation-band{background:rgba(160,145,190,.09);}.theme-dark .rd-relation-band>span{color:var(--text-normal);}
+
+@container (min-width:531px) and (max-width:1050px){.rd-desktop-grid{height:auto;min-height:0;grid-template-rows:240px 350px 300px 350px 280px;}}
+.rd-relation-detail[hidden]{display:none!important;}
+.rd-module[data-module=graph] .rd-body>.rd-network-caption{min-height:48px!important;padding:6px 10px!important;}
+.rd-module .rd-relation-map{min-height:60px!important;contain:size;}
+.rd-relation-expanded .rd-relation-map{min-height:180px!important;}
