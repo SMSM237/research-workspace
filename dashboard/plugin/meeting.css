@@ -47,3 +47,12 @@
 .is-mobile .rd-module .rd-calendar-today{min-height:44px}
 .rd-module[data-module=calendar] .rd-body{gap:2px}
 .rd-module[data-module=calendar] .rd-calendar-grid{row-gap:1px;margin-bottom:0;grid-template-rows:20px}
+
+/* Use one row grid for the three desktop columns, so card edges cannot drift. */
+@container (min-width:1051px){
+ .rd-desktop-right{display:contents;}
+ .rd-desktop-grid{grid-template-areas:'home home home' 'tasks weekly schedules' 'tasks projects meetings' 'calendar projects meetings' 'calendar graph papers';}
+ .rd-desktop-card[data-card=schedules]{grid-area:schedules;}
+ .rd-desktop-card[data-card=meetings]{grid-area:meetings;}
+ .rd-desktop-card[data-card=papers]{grid-area:papers;}
+}
