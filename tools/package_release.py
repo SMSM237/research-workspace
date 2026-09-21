@@ -27,7 +27,7 @@ def package(root,out):
     assert (root/'starter-vault/Tasks/할 일.md').read_text('utf-8')=='# 할 일\n\n'
     for link in re.findall(r'!\[\[([^\]]+)\]\]',(root/'starter-vault/Dashboard/모바일 홈.md').read_text('utf-8')):
         assert (root/'starter-vault'/(link+'.md')).is_file(),link
-    archive=out/'Research-Workspace-2026.09.16.1.zip'
+    archive=out/'Research-Workspace-2026.09.22.zip'
     with zipfile.ZipFile(archive,'w',zipfile.ZIP_DEFLATED) as z:
         for p in items:z.write(p,Path('research-workspace')/p.relative_to(root))
     with zipfile.ZipFile(archive) as z:
