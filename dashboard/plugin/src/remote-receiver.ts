@@ -35,7 +35,7 @@ export class RemoteReceiver {
       ledger[r.id]=statusFor(r,'dispatching','Windows에서 Codex에 실행 요청을 전달합니다.');
       await this.store.writeLedger(ledger);await this.store.writeStatus(ledger[r.id]);
       try {
-        const messageId=await this.send(this.config.thread,queuePrompt(r.id,r.action==='diagnostic',this.config.runbook));
+        const messageId=await this.send(this.config.thread,queuePrompt(r.id,r.action==='diagnostic',this.config.runbook,r.version===2?{path:r.path,sha256:r.sha256}:undefined));
         if(!UUID.test(messageId))throw Error('요청 접수 번호를 받지 못했습니다.');
         const fresh=await this.store.readLedger();
         ledger[r.id]=fresh[r.id]&&fresh[r.id].state!=='dispatching'?fresh[r.id]:{...statusFor(r,'queued','Codex가 요청을 접수했습니다. 실제 작업 시작을 기다립니다.'),queueMessageId:messageId};

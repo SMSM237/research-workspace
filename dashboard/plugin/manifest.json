@@ -1,7 +1,7 @@
 {
   "id": "figure-first-reader",
   "name": "Figure-first Reader",
-  "version": "0.7.5",
+  "version": "0.7.6",
   "minAppVersion": "1.5.0",
   "description": "Figure-first paper reader, daily tasks and research dashboard. Optional location-based weather; analysis runs in the separate Windows worker.",
   "author": "Local research tools",

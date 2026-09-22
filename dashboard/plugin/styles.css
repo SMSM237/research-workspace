@@ -776,3 +776,27 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 .paper-remote summary{min-height:44px;cursor:pointer;padding:10px 0;}
 body.is-mobile .workspace-leaf-content[data-type="paper-analysis-control"] .view-content.paper-remote{padding:20px 20px max(28px,env(safe-area-inset-bottom));}
 @media(max-width:380px){.paper-remote .paper-remote-record-head{gap:4px;}.paper-remote h1{font-size:24px;}}
+
+.rd-module[data-module=graph] .rd-body{padding:0!important;overflow:hidden!important;min-height:170px}
+.rd-module[data-module=graph] .rd-graph3d-host{flex:1 1 auto;min-height:170px;width:100%}
+.rd-module[data-module=graph] .rd-module-heading{position:relative;z-index:2}
+.rd-module[data-module=graph] .rd-network-expand{width:40px;min-width:40px;height:40px;min-height:40px}
+.rd-graph3d{position:relative;width:100%;height:100%;min-height:170px;border-radius:0 0 16px 16px;overflow:hidden;background:#202534;touch-action:none}
+.rd-graph3d-canvas{display:block;width:100%;height:100%;min-height:170px;cursor:grab;touch-action:none}
+.rd-graph3d-canvas:active{cursor:grabbing}
+.rd-graph3d-canvas:focus-visible{outline:3px solid #9bcfff;outline-offset:-4px}
+.rd-graph3d-tip{position:absolute;z-index:3;max-width:min(290px,75%);padding:6px 9px;border-radius:9px;background:rgba(14,19,33,.94);color:#f6f7fb;font-size:12px;line-height:1.35;pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 5px 18px rgba(0,0,0,.25)}
+.rd-graph3d-accessible{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.rd-relation-expanded .rd-graph3d{height:min(68vh,680px);min-height:300px;border-radius:16px}
+.rd-relation-expanded .rd-graph3d-canvas{min-height:300px}
+.rd-module[data-module=graph] .rd-empty{padding:18px}
+.rd-paper-section,.rr-library-section{margin:8px 0 6px;font-size:12px;font-weight:700;letter-spacing:.02em;color:var(--text-muted)}
+.rd-pdf-row,.rr-library-pdf-row{display:flex;align-items:center;gap:8px;min-width:0}
+.rd-pdf-row>.rd-note-link,.rr-library-pdf-row>.rr-library-paper{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
+.rd-module .rd-pdf-analyze,.rr-library-analyze{flex:none;min-width:52px;min-height:40px;padding:5px 9px;border-radius:9px;font-size:12px;font-weight:650;line-height:1.2;background:#e5f3ed;color:#155a45}
+.rd-module .rd-pdf-analyze:focus-visible,.rr-library-analyze:focus-visible{outline:2px solid #2478ba;outline-offset:2px}
+.rr-library-pdf-row{border-bottom:1px solid var(--background-modifier-border);padding:5px 0}
+.is-mobile .rd-module .rd-pdf-analyze,.is-mobile .rr-library-analyze{min-height:44px;min-width:62px}
+.is-mobile .rd-module[data-module=graph] .rd-network-expand{width:44px;min-width:44px;height:44px;min-height:44px}
+@media(max-width:650px){.rd-module[data-module=graph] .rd-body,.rd-graph3d,.rd-graph3d-canvas{min-height:210px}}
+@media(forced-colors:active){.rd-graph3d{border:2px solid CanvasText}}

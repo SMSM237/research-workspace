@@ -1,4 +1,4 @@
-import importlib.util,json,hashlib
+import importlib.util,json,hashlib,sqlite3
 from pathlib import Path
 import pytest
 
@@ -52,3 +52,20 @@ def test_receipt_rejects_path_escape(tmp_path):
     def git(v,*args):
         return b'https://github.com/example/research-notes.git' if args[0]=='remote' else b'abcd refs/heads/main' if args[0]=='ls-remote' else b'abcd'
     with pytest.raises(ValueError,match='Unsafe'):m.verify_receipt(tmp_path,RID,p,[JOB],git,expected_remote='https://github.com/example/research-notes.git')
+
+def test_individual_pdf_request_checks_exact_bytes_and_job(tmp_path):
+    vault=tmp_path/'vault';state=tmp_path/'state';pdf=vault/'PDF/paper.pdf';pdf.parent.mkdir(parents=True);pdf.write_bytes(b'%PDF selected')
+    sha=hashlib.sha256(pdf.read_bytes()).hexdigest();r=dict(version=2,id=RID,action='analyze-pdf',createdAt='2026-09-23T00:00:00Z',path='PDF/paper.pdf',sha256=sha)
+    m.atomic(vault/'.paper-control/requests'/f'{RID}.json',r)
+    assert m.request(vault,RID)==r
+    db=state/'state/jobs.sqlite3';db.parent.mkdir(parents=True)
+    with sqlite3.connect(db) as con:
+        con.execute('CREATE TABLE jobs(id TEXT, fingerprint TEXT, data TEXT)')
+        con.execute('INSERT INTO jobs VALUES (?,?,?)',(JOB,'fingerprint',json.dumps({'source_hashes':[sha]})))
+    m.atomic(state/'mobile-control-ledger.json',{RID:dict(version=1,id=RID,state='queued',message='queued',updatedAt='2026-09-23T00:00:00Z')})
+    assert m.update(vault,state,RID,'running','Started',[JOB])['selected_jobs']==[JOB]
+    assert m.update(vault,state,RID,'review','Work review')['state']=='review'
+    assert m.update(vault,state,RID,'publishing','Git check')['state']=='publishing'
+    with pytest.raises(ValueError,match='Selected job'):m.update(vault,state,RID,'running','wrong',['b'*32])
+    pdf.write_bytes(b'%PDF changed')
+    with pytest.raises(ValueError,match='changed'):m.request(vault,RID)

@@ -66,6 +66,19 @@ def test_complete_requires_actual_published_files_and_hash_readback(tmp_path,mon
     assert (notes/'mine.md').read_text()=='KEEP'
 
 
+def test_selected_pdf_links_to_published_report(tmp_path,monkeypatch):
+    import shutil
+    import figure_reports.publication as module
+    w,j,packet,p=setup(tmp_path)
+    library=w.vault/'PDF';library.mkdir()
+    original=library/'selected.pdf';shutil.copyfile(j['main'],original)
+    monkeypatch.setattr(module,'sync_publication',lambda *args:{'status':'pending_git'})
+    receipt=module.publish_checked(w,j,packet,p,Path(j['folder'])/'model-analysis')
+    links=json.loads((w.vault/'Dashboard/pdf-links.json').read_text('utf-8'))
+    assert links['links']['PDF/selected.pdf']==receipt['markdown']
+    assert (w.vault/receipt['markdown']).is_file()
+
+
 def test_explicit_auto_policy_resumes_prepared_without_new_permission(tmp_path,monkeypatch):
     from figure_reports.analysis_pipeline import FigurePipeline
     from figure_reports.model_adapter import require_consent

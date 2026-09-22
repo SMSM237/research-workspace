@@ -1,10 +1,11 @@
-import {PaperProfile,paperRelations,relationPositions} from './paper-relations';
+import {PaperProfile,paperRelations} from './paper-relations';
+import {GraphItem,GraphLink,PaperGraph3D} from './graph-3d';
 import {dailyVerse,millisUntilNextDay} from './daily-verse';
 import {planWeekStep,graphFiles,paperIndexText} from './dashboard-data';
 import {TaskCelebration} from './task-celebration';
 import {completedToday} from './dashboard-data';
 import {App,Modal,ItemView,WorkspaceLeaf,MarkdownRenderChild,Notice,Platform,Plugin,TFile,setIcon} from 'obsidian';
-import {GraphLayout,graphPositions,Task,READING,ReadingState,localDay,parseTasks,readingState,setReading,toggleTask,weekCounts,weekDays,taskSource,validDay,dailyTasks,dailyCounts,newDailyTask,taskStart,monthWeeks,addPlanTask} from './dashboard-data';
+import {Task,READING,ReadingState,localDay,parseTasks,readingState,setReading,toggleTask,weekCounts,weekDays,taskSource,validDay,dailyTasks,dailyCounts,newDailyTask,taskStart,monthWeeks,addPlanTask} from './dashboard-data';
 import {statusModel} from './status-data';
 import {DashboardRecords} from './dashboard-records';
 import {MEETING_VIEW} from './meeting-view';
@@ -15,7 +16,7 @@ import {WorkerJobs,workerRecord,workerModel} from './library';
 const DESKTOP='research-dashboard';
 const PC='Dashboard/연구 홈.canvas',MOBILE='Dashboard/모바일 홈.md';
 const MODULES:Record<string,[string,string,string]>={tasks:['할 일','완료는 오늘까지 · 미완료는 내일로','check-square'],weekly:['이번 주 기록','완료한 날짜를 기준으로','chart-no-axes-column'],projects:['프로젝트','프로젝트별 월간·주간 계획','folder-kanban'],connections:['연결된 노트','프로젝트·회의·논문 사이','network'],meetings:['회의록','결정과 후속 업무를 이어서','messages-square'],papers:['논문','분석과 읽기를 구분해서','book-open']};
-interface Snapshot {tasks:Task[];projects:TFile[];meetings:TFile[];schedules:TFile[];papers:TFile[];paperIndex:TFile|null;profiles:PaperProfile[];reading:string;}
+interface Snapshot {tasks:Task[];projects:TFile[];meetings:TFile[];schedules:TFile[];papers:TFile[];pdfs:TFile[];pdfLinks:Record<string,string>;paperIndex:TFile|null;profiles:PaperProfile[];reading:string;}
 MODULES.calendar=['달력','날짜별 회의와 할 일 기록','calendar-days'];
 MODULES.schedules=['회의 일정','예정된 만남과 준비','calendar-clock'];
 MODULES.graph=['그래프뷰','공통 주제·개념으로 찾는 논문 연결','network'];
@@ -44,12 +45,15 @@ export class ResearchDashboard {
   }
   get app(){return this.plugin.app;}
   async openLibrary(){await (this.plugin as Plugin&{openLibrary:()=>Promise<void>}).openLibrary();}
+  async pdfRequests(){return (this.plugin as any).remoteControl?.requests()||[];}
+  async requestPdf(file:TFile){const control=(this.plugin as any).remoteControl;if(!control)throw Error('논문 분석 연결이 준비되지 않았습니다.');await control.submitPdf(file);}
+  async openAnalysisStatus(){await (this.plugin as any).remoteControl?.open();}
   async newSchedule(title:string,day:string,time:string){if(!validDay(day)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(time))throw Error('회의 날짜와 시간을 입력해 주세요.');const safe=title.trim().replace(/[<>:"/\\|?*\x00-\x1f]/g,' ').replace(/[. ]+$/,'').slice(0,90);if(!safe)throw Error('회의 제목을 입력해 주세요.');await this.ensureFolder('Meetings/Schedule');const path=`Meetings/Schedule/${day} ${time.replace(':','')} ${safe}.md`;if(this.app.vault.getAbstractFileByPath(path))throw Error('같은 회의 일정이 있습니다.');await this.app.vault.create(path,`---\ntype: meeting_schedule\ndate: ${day}\ntime: "${time}"\ntitle: ${JSON.stringify(safe)}\n---\n# ${safe}\n\n## 관련 프로젝트·논문\n\n## 준비할 내용\n\n## 회의록\n\n`);this.cache=null;}
   async jobs(){try{const {value}=await workerRecord(this.app,true);if(!value)return [];if(value.version!==1||!Array.isArray(value.jobs))throw Error();return value.jobs;}catch{throw Error('분석 작업 기록을 읽지 못했습니다.');}}
   subscribe(fn:()=>void){this.listeners.add(fn);return ()=>this.listeners.delete(fn);}
   async openHome(mobile=Platform.isMobile){if(mobile){await this.open(MOBILE,false);return;}const leaf=this.app.workspace.getLeavesOfType(DESKTOP)[0]||this.app.workspace.getLeaf('tab');await leaf.setViewState({type:DESKTOP,active:true});this.app.workspace.setActiveLeaf(leaf,{focus:true});}
   async open(path:string,newTab=true){const file=this.app.vault.getAbstractFileByPath(path);if(!(file instanceof TFile)){new Notice('연결된 노트를 찾을 수 없습니다.');return;}
-    if(newTab&&!Platform.isMobile&&file.extension==='md'&&path!==MOBILE){const leaf=[...this.app.workspace.getLeavesOfType(MEETING_VIEW),...this.app.workspace.getLeavesOfType('markdown')].find(l=>l.getRoot()===this.app.workspace.rightSplit)||this.app.workspace.getRightLeaf(false);if(!leaf)return;await leaf.openFile(file,{state:{mode:'preview'}});await this.app.workspace.revealLeaf(leaf);(this.app.workspace.rightSplit as any).setSize(Math.min(580,window.innerWidth*.44));return;}
+    if(newTab&&!Platform.isMobile&&['md','pdf'].includes(file.extension)&&path!==MOBILE){const leaf=[...this.app.workspace.getLeavesOfType(MEETING_VIEW),...this.app.workspace.getLeavesOfType('markdown'),...this.app.workspace.getLeavesOfType('pdf')].find(l=>l.getRoot()===this.app.workspace.rightSplit)||this.app.workspace.getRightLeaf(false);if(!leaf)return;await leaf.openFile(file,file.extension==='md'?{state:{mode:'preview'}}:undefined);await this.app.workspace.revealLeaf(leaf);(this.app.workspace.rightSplit as any).setSize(Math.min(580,window.innerWidth*.44));return;}
     const existing=this.app.workspace.getLeavesOfType(file.extension==='canvas'?'canvas':'markdown').find(l=>l.getRoot()===this.app.workspace.rootSplit&&(l.view as any).file?.path===path);const leaf=existing||this.app.workspace.getLeaf('tab');await leaf.openFile(file,{state:{mode:'preview'}});this.app.workspace.setActiveLeaf(leaf,{focus:true});}
   async openMeeting(path:string){
     const file=this.app.vault.getAbstractFileByPath(path);if(!(file instanceof TFile))throw Error('회의록을 찾을 수 없습니다.');
@@ -84,7 +88,7 @@ export class ResearchDashboard {
     }));
   }
   snapshot():Promise<Snapshot>{
-    if(!this.cache)this.cache=(async()=>{const files=this.app.vault.getMarkdownFiles();const papers=files.filter(f=>f.path.startsWith('Papers/')&&this.app.metadataCache.getFileCache(f)?.frontmatter?.report_id);const paperIndex=await this.syncPaperIndex(papers);const sources=files.filter(f=>taskSource(f.path));const contents=await Promise.all(sources.map(async f=>[f.path,await this.app.vault.cachedRead(f)] as const));const reading=this.app.vault.getAbstractFileByPath(READING);return {tasks:contents.flatMap(([p,t])=>parseTasks(p,t)),projects:files.filter(f=>f.path.startsWith('Projects/')&&!f.path.startsWith('Projects/Plans/')&&this.app.metadataCache.getFileCache(f)?.frontmatter?.dashboard_example!==true).sort((a,b)=>a.basename.localeCompare(b.basename,'ko')),schedules:files.filter(f=>f.path.startsWith('Meetings/Schedule/')),meetings:files.filter(f=>f.path.startsWith('Meetings/')&&!f.path.startsWith('Meetings/Schedule/')).sort((a,b)=>b.basename.localeCompare(a.basename,'ko')),papers,paperIndex,profiles:await this.profiles(papers),reading:reading instanceof TFile?await this.app.vault.cachedRead(reading):''};})();
+    if(!this.cache)this.cache=(async()=>{const files=this.app.vault.getMarkdownFiles();const papers=files.filter(f=>f.path.startsWith('Papers/')&&this.app.metadataCache.getFileCache(f)?.frontmatter?.report_id);const paperIndex=await this.syncPaperIndex(papers);const sources=files.filter(f=>taskSource(f.path));const contents=await Promise.all(sources.map(async f=>[f.path,await this.app.vault.cachedRead(f)] as const));const reading=this.app.vault.getAbstractFileByPath(READING);let pdfLinks:Record<string,string>={};try{const text=await this.app.vault.adapter.read('Dashboard/pdf-links.json'),data=JSON.parse(text);if(data.version===1&&data.links&&typeof data.links==='object'&&!Array.isArray(data.links))pdfLinks=data.links;}catch{}return {tasks:contents.flatMap(([p,t])=>parseTasks(p,t)),projects:files.filter(f=>f.path.startsWith('Projects/')&&!f.path.startsWith('Projects/Plans/')&&this.app.metadataCache.getFileCache(f)?.frontmatter?.dashboard_example!==true).sort((a,b)=>a.basename.localeCompare(b.basename,'ko')),schedules:files.filter(f=>f.path.startsWith('Meetings/Schedule/')),meetings:files.filter(f=>f.path.startsWith('Meetings/')&&!f.path.startsWith('Meetings/Schedule/')).sort((a,b)=>b.basename.localeCompare(a.basename,'ko')),papers,pdfs:this.app.vault.getFiles().filter(f=>f.extension.toLowerCase()==='pdf'&&(f.path.startsWith('PDF/')||f.path.startsWith('Sources/'))),pdfLinks,paperIndex,profiles:await this.profiles(papers),reading:reading instanceof TFile?await this.app.vault.cachedRead(reading):''};})();
     return this.cache;
   }
   async ensureFolder(path:string){let parent='';for(const part of path.split('/')){parent=parent?parent+'/'+part:part;if(!this.app.vault.getAbstractFileByPath(parent))await this.app.vault.createFolder(parent);}}
@@ -117,14 +121,13 @@ export class ResearchDashboard {
 
 class ModuleView extends MarkdownRenderChild {
   private month=new Date(new Date().getFullYear(),new Date().getMonth(),1);
-  private graphLayout:GraphLayout|'related'='related';private lastSelectedDay='';private projectPath='';private selectedWeek='';private openWeeks=new Set<string>();
+  private graph3d:PaperGraph3D|null=null;private lastSelectedDay='';private projectPath='';private selectedWeek='';private openWeeks=new Set<string>();
   private alive=false;private body!:HTMLElement;private error!:HTMLElement;private filter='all';private ticket=0;
   constructor(el:HTMLElement,private dashboard:ResearchDashboard,private kind:string){super(el);}
-  onload(){this.alive=true;const saved=this.dashboard.app.loadLocalStorage('research-dashboard-view')||{};if(typeof saved.project==='string')this.projectPath=saved.project;if(saved.graphVersion===2&&['related','circle','hierarchy','free'].includes(saved.graph))this.graphLayout=saved.graph;const root=this.containerEl;root.empty();root.classList.add('rd-module');root.dataset.module=this.kind;
+  onload(){this.alive=true;const saved=this.dashboard.app.loadLocalStorage('research-dashboard-view')||{};if(typeof saved.project==='string')this.projectPath=saved.project;const root=this.containerEl;root.empty();root.classList.add('rd-module');root.dataset.module=this.kind;
     if(this.kind==='home'){root.classList.add('rd-home');this.error=root.createEl('p',{cls:'rd-error',attr:{role:'alert'}});this.error.hidden=true;this.body=root.createDiv({cls:'rd-home-content'});this.register(this.dashboard.subscribe(()=>void this.renderHome()));void this.renderHome();this.registerInterval(window.setInterval(()=>void this.renderHome(),1800000));let midnight=0;const nextDay=()=>{window.clearTimeout(midnight);midnight=window.setTimeout(()=>{if(!this.alive)return;void this.renderHome();nextDay();},millisUntilNextDay());};nextDay();this.register(()=>window.clearTimeout(midnight));this.registerDomEvent(document,'visibilitychange',()=>{if(!document.hidden){void this.renderHome();nextDay();}});this.registerDomEvent(window,'focus',()=>{void this.renderHome();nextDay();});return;}
     const meta=MODULES[this.kind];if(!meta){root.createEl('p',{text:'알 수 없는 모듈입니다. 원본 노트의 모듈 이름을 확인해 주세요.'});return;}
-    const h=root.createDiv({cls:'rd-module-heading'});const icon=h.createSpan({cls:'rd-icon',attr:{'aria-hidden':'true'}});setIcon(icon,meta[2]);const heading=h.createEl('h2');if(this.kind==='papers'){const open=heading.createEl('button',{cls:'rd-library-open',text:meta[0],attr:{type:'button','aria-label':'분석된 논문 목록 열기',title:'왼쪽 사이드바에서 논문 목록 열기'}});open.onclick=()=>void this.act(()=>this.dashboard.openLibrary());}else heading.textContent=meta[0];if(this.kind!=='papers')root.createEl('p',{text:meta[1],cls:'rd-subtitle'});else h.createDiv({cls:'rd-paper-connection'});
-    if(this.kind==='graph'){const pick=h.createEl('select',{cls:'rd-graph-picker',attr:{'aria-label':'그래프 배치 형태'}});for(const [value,text] of [['related','연관 묶음'],['circle','원형'],['hierarchy','계층형'],['free','자유 배치']])pick.createEl('option',{value,text});pick.value=this.graphLayout;pick.onchange=()=>{this.graphLayout=pick.value as GraphLayout|'related';this.saveView();void this.render();};}
+     const h=root.createDiv({cls:'rd-module-heading'});const icon=h.createSpan({cls:'rd-icon',attr:{'aria-hidden':'true'}});setIcon(icon,meta[2]);const heading=h.createEl('h2');if(this.kind==='papers'){const open=heading.createEl('button',{cls:'rd-library-open',text:meta[0],attr:{type:'button','aria-label':'PDF와 분석된 논문 목록 열기',title:'왼쪽 사이드바에서 PDF 보관함 열기'}});open.onclick=()=>void this.act(()=>this.dashboard.openLibrary());}else heading.textContent=meta[0];if(!['papers','graph'].includes(this.kind))root.createEl('p',{text:meta[1],cls:'rd-subtitle'});else if(this.kind==='papers')h.createDiv({cls:'rd-paper-connection'});
     this.error=root.createEl('p',{cls:'rd-error',attr:{role:'alert'}});this.error.hidden=true;
     this.body=root.createDiv({cls:'rd-body'});this.body.createEl('p',{text:'기록을 불러오고 있습니다.',cls:'rd-empty'});
     if(this.kind==='tasks'){h.createSpan({cls:'rd-task-day'});const today=this.button(h,'↩',async()=>this.dashboard.selectDay(''));today.classList.add('rd-task-today');today.setAttribute('aria-label','오늘 할 일로 돌아가기');today.title='오늘 할 일로 돌아가기';this.taskForm(root);}if(this.kind==='schedules')this.scheduleForm(h);
@@ -132,8 +135,8 @@ class ModuleView extends MarkdownRenderChild {
     this.register(this.dashboard.subscribe(()=>void this.render()));void this.render();
     if(this.kind==='papers')this.registerInterval(window.setInterval(()=>void this.renderWorker(),5000));
   }
-  onunload(){this.alive=false;this.ticket++;this.projectResize?.disconnect();}
-  private saveView(){const previous=this.dashboard.app.loadLocalStorage('research-dashboard-view')||{};this.dashboard.app.saveLocalStorage('research-dashboard-view',{...previous,...(this.kind==='projects'?{project:this.projectPath}:{graph:this.graphLayout,graphVersion:2})});}
+   onunload(){this.alive=false;this.ticket++;this.projectResize?.disconnect();this.graph3d?.destroy();}
+   private saveView(){const previous=this.dashboard.app.loadLocalStorage('research-dashboard-view')||{};this.dashboard.app.saveLocalStorage('research-dashboard-view',{...previous,project:this.projectPath});}
   private async act(fn:()=>Promise<unknown>){try{this.error.hidden=true;await fn();if(this.kind==='home')await this.renderHome();else await this.render();}catch(error){this.error.textContent=error instanceof Error?error.message:'저장하지 못했습니다. 다시 시도해 주세요.';this.error.hidden=false;}}
   private button(parent:HTMLElement,label:string,fn:()=>Promise<unknown>,icon?:string){const b=parent.createEl('button',{text:label,attr:{type:'button'}});if(icon){const i=b.createSpan({cls:'rd-button-icon',attr:{'aria-hidden':'true'}});setIcon(i,icon);b.prepend(i);}b.onclick=()=>void this.act(fn);return b;}
   private link(parent:HTMLElement,file:TFile,label=file.basename){const b=parent.createEl('button',{cls:'rd-note-link',text:label,attr:{type:'button'}});b.title=label;b.onclick=()=>void this.act(()=>this.dashboard.open(file.path));return b;}
@@ -145,7 +148,7 @@ class ModuleView extends MarkdownRenderChild {
     const add=heading.createEl('button',{cls:'rd-schedule-add',text:'일정 추가',attr:{type:'button','aria-label':'회의 일정 추가','aria-haspopup':'dialog'}});
     add.onclick=()=>new ScheduleEditor(this.dashboard.app,this.dashboard.records,undefined,this.dashboard.selectedDay||localDay(),async(title,day,time)=>{await this.dashboard.newSchedule(title,day,time);this.dashboard.refresh();},async record=>this.dashboard.openMeeting((await this.dashboard.records.minutes(record)).path),()=>this.dashboard.refresh()).open();
   }
-  private async render(){const ticket=++this.ticket;try{const s=await this.dashboard.snapshot();if(!this.alive||ticket!==this.ticket)return;const previousScroll=this.body.scrollTop;this.body.empty();
+  private async render(){const ticket=++this.ticket;try{const s=await this.dashboard.snapshot();if(!this.alive||ticket!==this.ticket)return;const previousScroll=this.body.scrollTop;this.graph3d?.destroy();this.graph3d=null;this.body.empty();
     if(this.kind==='tasks'){
       const day=this.dashboard.selectedDay||localDay(),today=localDay(),future=day>today,label=day===today?'오늘':`${Number(day.slice(5,7))}월 ${Number(day.slice(8))}일`;
       this.containerEl.querySelector('.rd-task-day')!.textContent=`${label} (${'일월화수목금토'[new Date(day+'T12:00:00').getDay()]})`;
@@ -190,7 +193,11 @@ class ModuleView extends MarkdownRenderChild {
       for(const [from,to] of edges.slice(0,6)){const row=this.body.createDiv({cls:'rd-connection-row'});for(const path of [from,to]){const f=this.dashboard.app.vault.getAbstractFileByPath(path);if(f instanceof TFile)this.link(row,f);}row.setAttribute('aria-label',`${from}에서 ${to}로 연결`);}
       this.button(this.body,'그래프 펼치기',async()=>{await this.dashboard.app.workspace.getLeaf('split').setViewState({type:'graph',active:true});},'network');
     }else if(this.kind==='papers'){
-      if(!s.papers.length)this.empty('완성된 리포트가 등록되면 이곳에서 읽을 수 있습니다.');
+      const pdfs=s.pdfs.filter(f=>f.path.startsWith('PDF/')).sort((a,b)=>a.basename.localeCompare(b.basename,'ko'));
+      const requests=await this.dashboard.pdfRequests();
+      if(pdfs.length){this.body.createEl('h3',{cls:'rd-paper-section',text:'원본 PDF'});for(const pdf of pdfs){const row=this.body.createDiv({cls:'rd-paper-row rd-pdf-row'});this.link(row,pdf,pdf.basename);const active=requests.find((x:any)=>x.request.version===2&&x.request.path===pdf.path);const report=s.pdfLinks[pdf.path];const button=row.createEl('button',{cls:'rd-pdf-analyze',text:report?'리포트':active?String(({pending:'전송 대기',queued:'접수 대기',running:'분석 중',review:'검증 중',publishing:'게시 중',waiting:'확인 대기',blocked:'조치 필요',complete:'완료'} as Record<string,string>)[active.status.state]||'상태 보기'):'분석',attr:{type:'button','aria-label':`${pdf.basename} ${report?'리포트 열기':active?'분석 상태 보기':'분석 시작'}`}});button.onclick=()=>report?void this.act(()=>this.dashboard.open(report)):active?void this.act(()=>this.dashboard.openAnalysisStatus()):void this.act(()=>this.dashboard.requestPdf(pdf));}}
+      if(s.papers.length)this.body.createEl('h3',{cls:'rd-paper-section',text:'분석 리포트'});
+      if(!s.papers.length&&!pdfs.length)this.empty('PDF 폴더에 파일을 넣으면 여기서 열고, 원하는 논문만 분석할 수 있습니다.');
       for(const p of s.papers){const row=this.body.createDiv({cls:'rd-paper-row'});const fm=this.dashboard.app.metadataCache.getFileCache(p)?.frontmatter;row.dataset.reportId=String(fm?.report_id||'');this.link(row,p,String(fm?.library_title||p.basename));const analysis=row.createEl('button',{cls:'rd-paper-analysis',text:'상태 확인',type:'button'});analysis.onclick=()=>new WorkerJobs(this.dashboard.app).open();}
       await this.renderWorker();
     }
@@ -213,39 +220,25 @@ class ModuleView extends MarkdownRenderChild {
     const list=this.body.createDiv({cls:'rd-plan-items'});if(!rows.length){list.classList.add('is-empty');list.createEl('p',{cls:'rd-plan-empty',text:'이번 주 계획을 추가해 보세요.'});}for(const task of rows)this.taskRow(list,task);
     const form=this.body.createEl('form',{cls:'rd-simple-task rd-plan-input'}),input=form.createEl('input',{type:'text',placeholder:'이번 주 할 일',attr:{'aria-label':w.heading+' 할 일',maxlength:'500',required:'true'}}),add=form.createEl('button',{type:'submit',text:'추가'});form.onsubmit=e=>{e.preventDefault();add.disabled=true;void this.act(()=>this.dashboard.addPlan(file,w.heading,input.value)).finally(()=>add.disabled=false);};
   }
-  private graphSelected='';
   private renderGraph(s:Snapshot,target=this.body,expanded=false){
-    const model=paperRelations(s.profiles,this.dashboard.app.metadataCache.resolvedLinks),nodes=model.nodes;
-    if(!nodes.length){target.createEl('p',{cls:'rd-empty',text:'분석한 논문이 등록되면 공통 주제별로 표시됩니다.'});return;}
-    const head=this.containerEl.querySelector('.rd-module-heading')!;
-    if(!expanded&&!head.querySelector('.rd-network-expand')){const expand=head.createEl('button',{cls:'rd-network-expand',attr:{type:'button','aria-label':'논문 연결 크게 보기',title:'논문 연결 크게 보기'}});setIcon(expand,'expand');expand.onclick=()=>{const modal=new Modal(this.dashboard.app);modal.titleEl.textContent='논문 사이의 연결';modal.contentEl.classList.add('rd-relation-expanded','rd-module');modal.open();this.renderGraph(s,modal.contentEl,true);};}
-    const status=target.createDiv({cls:'rd-relation-status',text:`논문 ${nodes.length}편 · 공통 주제 연결 ${model.edges.length}개`});status.title='점 선택: 리포트 열기 · 점에 마우스 또는 키보드 초점: 연결 이유 확인';
-    const map=target.createDiv({cls:'rd-network-map rd-relation-map',attr:{role:'group','aria-label':'공통 주제에 따른 논문 연결. 점을 누르면 리포트가 열립니다.'}});map.dataset.nodes=String(nodes.length);map.dataset.layout=this.graphLayout;
-    const plane=map.createDiv({cls:'rd-relation-plane'}),width=Math.max(230,map.clientWidth||300);
-    const layout=relationPositions(nodes,model.groups,width);
-    if(this.graphLayout!=='related'){
-      const other=graphPositions(nodes.map(n=>n.path),model.edges.map(e=>[e.from,e.to] as [string,string]),this.graphLayout);
-      layout.height=Math.max(260,Math.ceil(nodes.length/6)*75);layout.bands=[];
-      for(const [id,p] of other)layout.points.set(id,{x:24+p.x/300*(width-48),y:24+p.y/150*(layout.height-48)});
+    const model=paperRelations(s.profiles,this.dashboard.app.metadataCache.resolvedLinks),items:GraphItem[]=[],links:GraphLink[]=[];
+    for(const paper of model.nodes)items.push({id:'report:'+paper.path,path:paper.path,label:paper.title,group:model.groups.get(paper.path)||'미분류',kind:'report'});
+    const reportById=new Map(s.papers.map(f=>[String(this.dashboard.app.metadataCache.getFileCache(f)?.frontmatter?.report_id||''),f.path]));
+    const linkedReports=new Set(Object.values(s.pdfLinks));
+    for(const file of s.pdfs){
+      if(file.path.startsWith('Sources/')&&file.basename==='D001'&&linkedReports.has(reportById.get(file.path.split('/')[1])||''))continue;
+      const report=s.pdfLinks[file.path]||(file.path.startsWith('Sources/')?reportById.get(file.path.split('/')[1]):undefined);
+      const group=report?model.groups.get(report)||'미분류':'보관 PDF';
+      items.push({id:'pdf:'+file.path,path:file.path,label:file.path.startsWith('Sources/')?`${model.nodes.find(p=>p.path===report)?.title||file.path.split('/')[1]} · 원본 PDF`:file.basename,group,kind:'pdf'});
+      if(report&&model.nodes.some(p=>p.path===report))links.push({from:'pdf:'+file.path,to:'report:'+report,kind:'source'});
     }
-    plane.style.height=layout.height+'px';
-    const names=[...new Set(model.groups.values())].sort(),colors=['#337b72','#8561a6','#316c9e','#a56438','#727b32','#9b537b','#576579','#687878'];
-    const color=(path:string)=>colors[names.indexOf(model.groups.get(path)!)%colors.length];
-    for(const band of layout.bands){const region=plane.createDiv({cls:'rd-relation-band'});region.style.top=band.y+'px';region.style.height=band.height+'px';region.createSpan({text:band.name});}
-    const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox',`0 0 ${width} ${layout.height}`);svg.setAttribute('preserveAspectRatio','none');svg.setAttribute('aria-hidden','true');plane.append(svg);
-    for(const edge of model.edges){const a=layout.points.get(edge.from)!,b=layout.points.get(edge.to)!,line=document.createElementNS(svg.namespaceURI,'path');line.setAttribute('d',`M ${a.x} ${a.y} Q ${(a.x+b.x)/2} ${(a.y+b.y)/2-12} ${b.x} ${b.y}`);line.setAttribute('data-from',edge.from);line.setAttribute('data-to',edge.to);line.classList.toggle('is-explicit',edge.explicit);svg.append(line);}
-    const caption=target.createEl('button',{cls:'rd-network-caption',attr:{type:'button'}}),kind=caption.createSpan({cls:'rd-network-kind'}),title=caption.createSpan({cls:'rd-network-title'}),arrow=caption.createSpan({cls:'rd-network-arrow',attr:{'aria-hidden':'true'}});setIcon(arrow,'arrow-up-right');
-    const detail=target.createDiv({cls:'rd-relation-detail'});if(!expanded)detail.hidden=true;
-    const open=(path:string)=>void this.act(async()=>{if(expanded){target.closest('.modal-container')?.querySelector<HTMLElement>('.modal-close-button')?.click();}await this.dashboard.open(path);});
-    const select=(file:PaperProfile)=>{this.graphSelected=file.path;const related=model.edges.filter(e=>e.from===file.path||e.to===file.path);kind.textContent=`${model.groups.get(file.path)} · 연결 ${related.length}편`;title.textContent=String(this.dashboard.app.metadataCache.getCache(file.path)?.frontmatter?.library_title||file.title);caption.title=title.textContent;caption.setAttribute('aria-label',title.textContent+' 리포트 열기');caption.onclick=()=>open(file.path);
-      detail.empty();detail.createSpan({cls:'rd-relation-disclaimer',text:'공통 주제·개념 기반 추정 · 인용/기전 관계 아님'});
-      if(file.unavailable)detail.createDiv({text:'개념 자료를 읽지 못해 제목·태그만 사용했습니다.'});
-      if(!related.length)detail.createDiv({text:'현재 기준으로 연결되는 논문이 없습니다.'});
-      for(const edge of related){const other=nodes.find(n=>n.path===(edge.from===file.path?edge.to:edge.from))!;const row=detail.createEl('button',{cls:'rd-related-paper',attr:{type:'button'}});row.createSpan({text:other.title});row.createEl('small',{text:edge.reasons.join(' · ')});row.onclick=()=>open(other.path);}
-      for(const node of Array.from(plane.querySelectorAll<HTMLElement>('.rd-network-node')))node.setAttribute('aria-pressed',String(node.dataset.path===file.path));for(const line of Array.from(svg.querySelectorAll('path')))line.classList.toggle('is-active',line.dataset.from===file.path||line.dataset.to===file.path);
-    };
-    for(const file of nodes){const point=layout.points.get(file.path)!,node=plane.createEl('button',{cls:'rd-network-node is-paper',attr:{type:'button','aria-label':file.title+' 리포트 열기',title:file.title,'aria-pressed':'false'}});node.dataset.path=file.path;node.style.left=point.x/width*100+'%';node.style.top=point.y+'px';node.style.setProperty('--relation-color',color(file.path));node.createSpan({cls:'rd-network-dot',attr:{'aria-hidden':'true'}});node.onclick=()=>{select(file);open(file.path);};node.onfocus=()=>select(file);node.onmouseenter=()=>select(file);}
-    select(nodes.find(f=>f.path===this.graphSelected)||nodes[0]);
+    for(const edge of model.edges)links.push({from:'report:'+edge.from,to:'report:'+edge.to,kind:'related'});
+    if(!items.length){target.createEl('p',{cls:'rd-empty',text:'PDF 폴더에 파일을 넣으면 그래프에 나타납니다.'});return;}
+    const head=this.containerEl.querySelector('.rd-module-heading')!;
+    if(!expanded&&!head.querySelector('.rd-network-expand')){const expand=head.createEl('button',{cls:'rd-network-expand',attr:{type:'button','aria-label':'3D 그래프 크게 보기',title:'3D 그래프 크게 보기'}});setIcon(expand,'expand');expand.onclick=()=>{let graph:PaperGraph3D|null=null;class GraphModal extends Modal{onClose(){graph?.destroy();}}const modal=new GraphModal(this.dashboard.app);modal.titleEl.textContent='논문 그래프';modal.contentEl.classList.add('rd-relation-expanded','rd-module');modal.open();graph=this.renderGraph(s,modal.contentEl,true)||null;};}
+    const host=target.createDiv({cls:'rd-graph3d-host'}),graph=new PaperGraph3D(host,items,links,path=>void this.act(()=>this.dashboard.open(path)));
+    if(!expanded)this.graph3d=graph;
+    return graph;
   }
   private async renderHome(){const ticket=++this.ticket;try{const counts=await this.dashboard.extras.activity();if(!this.alive||ticket!==this.ticket)return;this.body.empty();const left=this.body.createDiv({cls:'rd-greeting'});const today=new Date();left.createEl('h1',{text:today.toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'long'})});const weather=left.createDiv({cls:'rd-weather',text:'서울 · 날씨 확인 중'});void this.dashboard.extras.weather().then(text=>{if(weather.isConnected)weather.textContent=text;});const controls=left.createDiv({cls:'rd-weather-actions'});this.button(controls,'현재 위치',async()=>{weather.textContent=await this.dashboard.extras.useLocation();});this.button(controls,'서울',async()=>{weather.textContent=await this.dashboard.extras.seoul();});const source=controls.createEl('a',{text:'Open-Meteo',href:'https://open-meteo.com/',attr:{target:'_blank',rel:'noopener'}});
     const verse=dailyVerse();left.createEl('p',{cls:'rd-verse',text:verse.text});left.createEl('a',{cls:'rd-verse-source',text:verse.ref+' · 개역개정',href:verse.url,attr:{target:'_blank',rel:'noopener',title:'성경전서 개역개정판 © 대한성서공회 1998'}});
@@ -256,10 +249,9 @@ class ModuleView extends MarkdownRenderChild {
   }catch(error){if(this.alive){this.error.hidden=false;this.error.textContent=String(error);}}}
   private async renderWorker(){const e=this.containerEl.querySelector<HTMLElement>('.rd-paper-connection');if(!e)return;const status=await this.dashboard.worker();if(!this.alive||!e.isConnected)return;const signature=JSON.stringify(status);if(e.dataset.signature!==signature){e.dataset.signature=signature;e.empty();e.dataset.connection=status.connection;const b=e.createEl('button',{cls:'rr-connection-line',type:'button'});b.createSpan({cls:'rr-connection-dot',attr:{'aria-hidden':'true'}});b.createSpan({text:status.connection==='snapshot'?'분석 기록':status.label});b.title=status.detail;b.setAttribute('aria-label',status.label+'. '+status.detail);b.onclick=()=>new WorkerJobs(this.dashboard.app).open();}
     let jobs:any[];try{jobs=await this.dashboard.jobs();}catch{jobs=[];for(const b of Array.from(this.body.querySelectorAll<HTMLElement>('.rd-paper-analysis')))b.textContent='상태 확인 필요';return;}
-    const active=jobs.filter(j=>j.state==='queued').length;
     let stage=e.querySelector<HTMLElement>('.rd-paper-stage');if(!stage)stage=e.createDiv({cls:'rd-paper-stage'});stage.replaceChildren();
     if(status.running){const dots=stage.createSpan({cls:'rr-working-dots',attr:{'aria-hidden':'true'}});for(let i=0;i<3;i++)dots.createSpan();}
-    stage.createSpan({text:[status.stage,active?`대기 ${active}건`:''].filter(Boolean).join(' · ')});stage.title=status.detail;
+    stage.createSpan({text:status.stage});stage.title=status.detail;
     for(const row of Array.from(this.body.querySelectorAll<HTMLElement>('.rd-paper-row'))){const job=jobs.filter(j=>j.report_id===row.dataset.reportId).pop();const b=row.querySelector<HTMLElement>('.rd-paper-analysis');if(!b)continue;const labels:Record<string,string>={running:'분석 중',failed:'분석 오류',interrupted:'분석 중단',review:'검토 대기',prepared:'자료 준비',complete:'분석 완료',queued:'분석 대기'};b.classList.toggle('is-running',job?.state==='running'&&status.connection==='connected');b.textContent=job?(labels[job.state]||'상태 확인 필요'):'리포트 있음';b.title=job?.message||'분석 작업 내역 열기';}
   }
 }

@@ -244,6 +244,18 @@ def publish_checked(worker,job,packet,present,analysis,*,artifacts=None,visual_b
         atomic_write(target,(Path(job['bundle'])/doc['original_path']).read_bytes())
         if digest(target)!=doc['sha256']:raise ValueError('원본 게시 해시 불일치')
     result=build_report(data,staging,w.vault,artifacts=artifacts)
+    link_file=w.vault/'Dashboard/pdf-links.json'
+    library=w.vault/'PDF'
+    matched=[]
+    if library.exists():
+        for pdf in library.rglob('*.pdf'):
+            if not pdf.resolve().is_relative_to(library.resolve()) or not pdf.is_file():continue
+            if pdf.stat().st_size==Path(job['main']).stat().st_size and digest(pdf)==job['source_hashes'][0]:matched.append(pdf.relative_to(w.vault).as_posix())
+    if matched:
+        current=json.loads(link_file.read_text('utf-8')) if link_file.exists() else {'version':1,'links':{}}
+        if current.get('version')!=1 or not isinstance(current.get('links'),dict):raise ValueError('PDF 연결 목록 형식을 확인해 주세요.')
+        for rel in matched:current['links'][rel]=result['markdown']
+        atomic_json(link_file,current)
     manifest=json.loads((w.vault/result['manifest']).read_text('utf-8'))
     for rel,expected in manifest['files'].items():
         if digest(w.vault/rel)!=expected:raise ValueError('게시 파일 읽기 검증 실패: '+rel)
@@ -252,7 +264,7 @@ def publish_checked(worker,job,packet,present,analysis,*,artifacts=None,visual_b
     atomic_json(analysis/'publication-receipt.json',receipt);w.queue.checkpoint(job['id'],'publication',analysis/'publication-receipt.json')
     w.queue.update(job['id'],state='complete',stage='complete',message='리포트 게시·파일 검증 완료',markdown=result['markdown'],sync='pending_git')
     w.set_status(stage='complete',message=data['paper']['library_title']+' · 리포트 게시 완료 · Git 전송 확인 중')
-    sync=sync_publication(w.vault,job['report_id'],list(manifest['files'])+[f'Sources/{job["report_id"]}/{d["id"]}.pdf' for d in inv['documents']])
+    sync=sync_publication(w.vault,job['report_id'],list(manifest['files'])+[f'Sources/{job["report_id"]}/{d["id"]}.pdf' for d in inv['documents']]+(['Dashboard/pdf-links.json'] if matched else []))
     receipt['sync']=sync;atomic_json(analysis/'publication-receipt.json',receipt);w.queue.checkpoint(job['id'],'publication',analysis/'publication-receipt.json')
     w.queue.update(job['id'],sync=sync['status'],message='리포트 게시·검증 완료 · '+('Git 전송 확인' if sync['status']=='synced' else 'Git 전송 확인 대기'))
     restart=w.state/'restart-after-publication.json'

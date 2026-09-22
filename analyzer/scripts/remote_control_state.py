@@ -4,10 +4,11 @@ Complete requires per-file SHA-256 equality with the fetched, verified remote
 commit. A diagnostic acknowledgement is a different state from publication.
 """
 from pathlib import Path, PurePosixPath
-import argparse, hashlib, json, os, re, subprocess
+import argparse, hashlib, json, os, re, sqlite3, subprocess
 from datetime import datetime, timezone
 
 UUID = re.compile(r'^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$')
+PDF_PATH = re.compile(r'^PDF/(?:[^/\\:\r\n<>"|?*#]+/)*[^/\\:\r\n<>"|?*#]+\.pdf$',re.I)
 
 def read(path):
     return json.loads(Path(path).read_text(encoding='utf-8-sig'))
@@ -23,8 +24,22 @@ def request(vault, rid):
     p=Path(vault)/'.paper-control/requests'/f'{rid}.json'
     if p.stat().st_size>2048:raise ValueError('Request too large')
     r=read(p)
-    if set(r)!={'version','id','action','createdAt','maxPapers'} or r['version']!=1 or r['id']!=rid or r['action'] not in {'analyze-inbox','diagnostic'} or type(r['maxPapers']) is not int or not 1<=r['maxPapers']<=10:raise ValueError('Invalid request')
+    if r.get('id')!=rid or not isinstance(r.get('createdAt'),str):raise ValueError('Invalid request')
+    if r.get('version')==1:
+        if set(r)!={'version','id','action','createdAt','maxPapers'} or r['action'] not in {'analyze-inbox','diagnostic'} or type(r['maxPapers']) is not int or not 1<=r['maxPapers']<=10:raise ValueError('Invalid request')
+    elif r.get('version')==2:
+        rel=r.get('path');sha=r.get('sha256')
+        if set(r)!={'version','id','action','createdAt','path','sha256'} or r['action']!='analyze-pdf' or not isinstance(rel,str) or not PDF_PATH.fullmatch(rel) or any(x in {'.','..',''} for x in rel.split('/')) or not isinstance(sha,str) or not re.fullmatch('[a-f0-9]{64}',sha):raise ValueError('Invalid PDF request')
+        root=Path(vault).resolve();p=(root/rel).resolve()
+        if not p.is_relative_to(root) or not p.is_relative_to((root/'PDF').resolve()) or not p.is_file() or hashlib.sha256(p.read_bytes()).hexdigest()!=sha:raise ValueError('Selected PDF is missing or changed')
+    else:raise ValueError('Invalid request version')
     return r
+
+def selected_job(state,jid,sha):
+    db=Path(state)/'state/jobs.sqlite3'
+    with sqlite3.connect(f'file:{db.as_posix()}?mode=ro',uri=True) as con:
+        row=con.execute('SELECT data FROM jobs WHERE id=?',(jid,)).fetchone()
+    if not row or json.loads(row[0]).get('source_hashes',[None])[0]!=sha:raise ValueError('Selected job does not match PDF hash')
 
 def git(vault,*args):
     result=subprocess.run(['git','-c','credential.interactive=never',*args],cwd=vault,capture_output=True,timeout=90,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
@@ -66,22 +81,26 @@ def update(vault,state,rid,phase,message,selected=None,receipt=None):
     if phase=='verified':
         if r['action']!='diagnostic':raise ValueError('Only diagnostics can be verified without reports')
     elif phase=='running':
-        if r['action']!='analyze-inbox' or not selected or len(selected)>r['maxPapers'] or len(set(selected))!=len(selected):raise ValueError('Select 1 to maxPapers jobs before analysis')
+        if r['action'] not in {'analyze-inbox','analyze-pdf'} or not selected or len(selected)>(r['maxPapers'] if r['version']==1 else 1) or len(set(selected))!=len(selected):raise ValueError('Select only requested jobs before analysis')
         if any(not re.fullmatch('[a-f0-9]{32}',s) for s in selected):raise ValueError('Invalid job IDs')
+        if r['version']==2:selected_job(state,selected[0],r['sha256'])
         if existing.get('selected_jobs') and existing['selected_jobs']!=selected:raise ValueError('Cannot change a running batch')
         record['selected_jobs']=selected;record['total']=len(selected);record.setdefault('completed',0)
     elif phase=='complete':
-        if r['action']!='analyze-inbox' or not receipt or not existing.get('selected_jobs'):raise ValueError('Missing selected jobs or receipt')
+        if r['action'] not in {'analyze-inbox','analyze-pdf'} or not receipt or not existing.get('selected_jobs'):raise ValueError('Missing selected jobs or receipt')
         config=read(Path(state)/'config.json')
         verified=verify_receipt(vault,rid,receipt,existing['selected_jobs'],expected_remote=config.get('expected_remote'))
+        if r['version']==2 and hashlib.sha256(git(vault,'show',f'{verified["commit"]}:{r["path"]}')).hexdigest()!=r['sha256']:raise ValueError('Selected PDF differs in remote Git')
         record.update(verified)
+    elif phase in {'review','publishing'}:
+        if r['action'] not in {'analyze-inbox','analyze-pdf'} or not existing.get('selected_jobs'):raise ValueError('Selected job is required')
     elif phase not in {'waiting','blocked','empty','cancelled'}:raise ValueError('Unsupported status transition')
     ledger[rid]=record;atomic(lp,ledger)
     atomic(Path(vault)/'.paper-control/status'/f'{rid}.json',record)
     return record
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('phase',choices=['running','waiting','blocked','verified','empty','cancelled','complete'])
+    p=argparse.ArgumentParser();p.add_argument('phase',choices=['running','review','publishing','waiting','blocked','verified','empty','cancelled','complete'])
     p.add_argument('--request',required=True);p.add_argument('--message',required=True);p.add_argument('--jobs',nargs='*');p.add_argument('--receipt')
     p.add_argument('--vault',default=str(Path.home()/'Documents/Codex/Paper Research Vault'));p.add_argument('--state',default=str(Path.home()/'Documents/Codex/Paper Analyzer'))
     a=p.parse_args();print(json.dumps(update(a.vault,a.state,a.request,a.phase,a.message,a.jobs,a.receipt),ensure_ascii=False))
