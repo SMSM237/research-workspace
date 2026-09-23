@@ -52,14 +52,20 @@ export class ResearchDashboard {
   async jobs(){try{const {value}=await workerRecord(this.app,true);if(!value)return [];if(value.version!==1||!Array.isArray(value.jobs))throw Error();return value.jobs;}catch{throw Error('분석 작업 기록을 읽지 못했습니다.');}}
   subscribe(fn:()=>void){this.listeners.add(fn);return ()=>this.listeners.delete(fn);}
   async openHome(mobile=Platform.isMobile){if(mobile){await this.open(MOBILE,false);return;}const leaf=this.app.workspace.getLeavesOfType(DESKTOP)[0]||this.app.workspace.getLeaf('tab');await leaf.setViewState({type:DESKTOP,active:true});this.app.workspace.setActiveLeaf(leaf,{focus:true});}
+  private sizeRightPane(leaf:WorkspaceLeaf){
+    if(Platform.isMobile)return;
+    const split=this.app.workspace.rightSplit as any,width=Math.min(580,window.innerWidth*.44);
+    split.setSize(width);
+    window.setTimeout(()=>{if(leaf.getRoot()===split&&!split.collapsed&&split.containerEl.getBoundingClientRect().width>width+16)split.setSize(width);},120);
+  }
   async open(path:string,newTab=true){const file=this.app.vault.getAbstractFileByPath(path);if(!(file instanceof TFile)){new Notice('연결된 노트를 찾을 수 없습니다.');return;}
-    if(newTab&&!Platform.isMobile&&['md','pdf'].includes(file.extension)&&path!==MOBILE){const leaf=[...this.app.workspace.getLeavesOfType(MEETING_VIEW),...this.app.workspace.getLeavesOfType('markdown'),...this.app.workspace.getLeavesOfType('pdf')].find(l=>l.getRoot()===this.app.workspace.rightSplit)||this.app.workspace.getRightLeaf(false);if(!leaf)return;await leaf.openFile(file,file.extension==='md'?{state:{mode:'preview'}}:undefined);await this.app.workspace.revealLeaf(leaf);(this.app.workspace.rightSplit as any).setSize(Math.min(580,window.innerWidth*.44));return;}
+    if(newTab&&!Platform.isMobile&&['md','pdf'].includes(file.extension)&&path!==MOBILE){const leaf=[...this.app.workspace.getLeavesOfType(MEETING_VIEW),...this.app.workspace.getLeavesOfType('markdown'),...this.app.workspace.getLeavesOfType('pdf')].find(l=>l.getRoot()===this.app.workspace.rightSplit)||this.app.workspace.getRightLeaf(false);if(!leaf)return;await leaf.openFile(file,file.extension==='md'?{state:{mode:'preview'}}:undefined);await this.app.workspace.revealLeaf(leaf);this.sizeRightPane(leaf);return;}
     const existing=this.app.workspace.getLeavesOfType(file.extension==='canvas'?'canvas':'markdown').find(l=>l.getRoot()===this.app.workspace.rootSplit&&(l.view as any).file?.path===path);const leaf=existing||this.app.workspace.getLeaf('tab');await leaf.openFile(file,{state:{mode:'preview'}});this.app.workspace.setActiveLeaf(leaf,{focus:true});}
   async openMeeting(path:string){
     const file=this.app.vault.getAbstractFileByPath(path);if(!(file instanceof TFile))throw Error('회의록을 찾을 수 없습니다.');
     const leaf=Platform.isMobile?this.app.workspace.getLeaf(false):([...this.app.workspace.getLeavesOfType(MEETING_VIEW),...this.app.workspace.getLeavesOfType('markdown')].find(l=>l.getRoot()===this.app.workspace.rightSplit)||this.app.workspace.getRightLeaf(false));
     if(!leaf)throw Error('회의록을 열 공간을 찾지 못했습니다.');await leaf.setViewState({type:MEETING_VIEW,state:{file:file.path},active:true});await this.app.workspace.revealLeaf(leaf);
-    if(!Platform.isMobile)(this.app.workspace.rightSplit as any).setSize(Math.min(580,window.innerWidth*.44));
+    this.sizeRightPane(leaf);
   }
   private indexQueue:Promise<unknown>=Promise.resolve();
   private indexError="";

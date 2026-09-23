@@ -1290,6 +1290,14 @@ class ResearchDashboard {
         await this.open(MOBILE, false);
         return;
     } const leaf = this.app.workspace.getLeavesOfType(DESKTOP)[0] || this.app.workspace.getLeaf('tab'); await leaf.setViewState({ type: DESKTOP, active: true }); this.app.workspace.setActiveLeaf(leaf, { focus: true }); }
+    sizeRightPane(leaf) {
+        if (obsidian_1.Platform.isMobile)
+            return;
+        const split = this.app.workspace.rightSplit, width = Math.min(580, window.innerWidth * .44);
+        split.setSize(width);
+        window.setTimeout(() => { if (leaf.getRoot() === split && !split.collapsed && split.containerEl.getBoundingClientRect().width > width + 16)
+            split.setSize(width); }, 120);
+    }
     async open(path, newTab = true) {
         const file = this.app.vault.getAbstractFileByPath(path);
         if (!(file instanceof obsidian_1.TFile)) {
@@ -1302,7 +1310,7 @@ class ResearchDashboard {
                 return;
             await leaf.openFile(file, file.extension === 'md' ? { state: { mode: 'preview' } } : undefined);
             await this.app.workspace.revealLeaf(leaf);
-            this.app.workspace.rightSplit.setSize(Math.min(580, window.innerWidth * .44));
+            this.sizeRightPane(leaf);
             return;
         }
         const existing = this.app.workspace.getLeavesOfType(file.extension === 'canvas' ? 'canvas' : 'markdown').find(l => l.getRoot() === this.app.workspace.rootSplit && l.view.file?.path === path);
@@ -1319,8 +1327,7 @@ class ResearchDashboard {
             throw Error('회의록을 열 공간을 찾지 못했습니다.');
         await leaf.setViewState({ type: meeting_view_1.MEETING_VIEW, state: { file: file.path }, active: true });
         await this.app.workspace.revealLeaf(leaf);
-        if (!obsidian_1.Platform.isMobile)
-            this.app.workspace.rightSplit.setSize(Math.min(580, window.innerWidth * .44));
+        this.sizeRightPane(leaf);
     }
     syncPaperIndex(papers) {
         const run = this.indexQueue.catch(() => { }).then(async () => {
