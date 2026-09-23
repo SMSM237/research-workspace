@@ -91,7 +91,16 @@ export class PaperRemoteControl {
       const configPath=path.join(root,'mobile-control.json');if(!fs.existsSync(configPath))return;
       const c:LocalConfig=JSON.parse(fs.readFileSync(configPath,'utf8'));
       if(!c.enabled)return;
-      if(c.version!==1||!UUID.test(c.thread)||![c.codex,c.runbook,c.workspace].every(p=>typeof p==='string'&&path.isAbsolute(p)&&fs.existsSync(p)))throw Error('PC 분석 연결 설정을 확인해 주세요.');
+      if(c.version!==1||!UUID.test(c.thread)||![c.codex,c.runbook,c.workspace].every(p=>typeof p==='string'&&path.isAbsolute(p))||![c.runbook,c.workspace].every(p=>fs.existsSync(p)))throw Error('PC 분석 연결 설정을 확인해 주세요.');
+      let codexExecutable=c.codex;
+      if(!fs.existsSync(codexExecutable)){
+        const bin=path.join(os.homedir(),'AppData','Local','OpenAI','Codex','bin');
+        const configured=path.resolve(c.codex).toLowerCase();
+        if(path.basename(configured)!=='codex.exe'||!configured.startsWith(bin.toLowerCase()+path.sep))throw Error('PC 분석 실행 파일을 찾지 못했습니다.');
+        const candidates=fs.existsSync(bin)?fs.readdirSync(bin,{withFileTypes:true}).filter((d:any)=>d.isDirectory()).map((d:any)=>path.join(bin,d.name,'codex.exe')).filter((p:string)=>fs.existsSync(p)).sort((a:string,b:string)=>fs.statSync(b).mtimeMs-fs.statSync(a).mtimeMs):[];
+        if(!candidates.length)throw Error('Codex 앱 실행 파일을 찾지 못했습니다.');
+        codexExecutable=candidates[0];
+      }
       const ledgerPath=path.join(root,'mobile-control-ledger.json');
       const a=this.plugin.app.vault.adapter;await this.ensure();
       const atomic=(filename:string,value:unknown)=>{const tmp=filename+'.tmp';fs.writeFileSync(tmp,JSON.stringify(value,null,2),'utf8');fs.renameSync(tmp,filename);};
@@ -104,7 +113,7 @@ export class PaperRemoteControl {
         writeLedger:async l=>atomic(ledgerPath,l)
       };
       this.receiver=new RemoteReceiver(store,c,(thread,message)=>new Promise((resolve,reject)=>{
-        require('child_process').execFile(c.codex,['queue','--thread',thread,'--message',message],{cwd:c.workspace,windowsHide:true,timeout:45000,maxBuffer:65536,encoding:'utf8'},(err:unknown,stdout:string)=>{
+        require('child_process').execFile(codexExecutable,['queue','--thread',thread,'--message',message],{cwd:c.workspace,windowsHide:true,timeout:45000,maxBuffer:65536,encoding:'utf8'},(err:unknown,stdout:string)=>{
           if(err){reject(Error('Codex 연결을 확인해 주세요.'));return;}
           const match=stdout.match(/Queued message ([0-9a-f-]{36}) for thread ([0-9a-f-]{36})/);
           match&&match[2]===thread&&UUID.test(match[1])?resolve(match[1]):reject(Error('Codex 접수 확인을 받지 못했습니다.'));
