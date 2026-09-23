@@ -66,7 +66,7 @@ function relationPositions(nodes, groups, width) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PaperGraph3D = void 0;
-const palette = ['#4cc9e9', '#f4bd64', '#f27378', '#68d9a1', '#b998f1', '#e6dd6b', '#80aceb', '#ef97be'];
+const palette = ['#82c7bd', '#e2bc7e', '#d99b95', '#a8bc8d', '#aaa4cb', '#b7c8db', '#d4acbb', '#aec6a3'];
 /** Perspective projection, with redraw only after interaction or resize. */
 class PaperGraph3D {
     constructor(host, items, links, open) {
@@ -85,13 +85,61 @@ class PaperGraph3D {
         this.lastY = 0;
         this.scheduled = false;
         this.disposed = false;
-        this.wheel = (e) => { e.preventDefault(); this.zoom = Math.max(.45, Math.min(3.5, this.zoom * Math.exp(-e.deltaY * .0012))); this.schedule(); };
-        this.down = (e) => { this.canvas.setPointerCapture(e.pointerId); this.start = { x: e.clientX, y: e.clientY, panX: this.panX, panY: this.panY, yaw: this.yaw, pitch: this.pitch, rotate: e.shiftKey || e.button === 2 }; this.tip.hidden = true; };
+        this.frame = 0;
+        this.lastFrame = 0;
+        this.resumeAt = 0;
+        this.nextTurn = 0;
+        this.velocityYaw = 0;
+        this.velocityPitch = 0;
+        this.targetYaw = 0;
+        this.targetPitch = 0;
+        this.direction = 0;
+        this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+        this.animate = (now) => {
+            if (this.disposed)
+                return;
+            const elapsed = this.lastFrame ? Math.min(40, now - this.lastFrame) : 0;
+            this.lastFrame = now;
+            if (!document.hidden && this.host.isConnected && !this.start && now >= this.resumeAt) {
+                const needsReset = Math.abs(this.zoom - 1) > .001 || Math.abs(this.panX) > .25 || Math.abs(this.panY) > .25;
+                if (needsReset) {
+                    const blend = this.reducedMotion.matches ? 1 : 1 - Math.exp(-elapsed / 1500);
+                    this.zoom += (1 - this.zoom) * blend;
+                    this.panX -= this.panX * blend;
+                    this.panY -= this.panY * blend;
+                    if (Math.abs(this.zoom - 1) < .001)
+                        this.zoom = 1;
+                    if (Math.abs(this.panX) < .25)
+                        this.panX = 0;
+                    if (Math.abs(this.panY) < .25)
+                        this.panY = 0;
+                }
+                if (!this.reducedMotion.matches) {
+                    if (now >= this.nextTurn) {
+                        this.direction += (Math.random() < .5 ? -1 : 1) * (1.1 + Math.random() * (Math.PI * 2 - 2.2));
+                        const speed = .0012 + Math.random() * .0006;
+                        this.targetYaw = Math.cos(this.direction) * speed;
+                        this.targetPitch = Math.sin(this.direction) * speed;
+                        this.nextTurn = now + 7000 + Math.random() * 5000;
+                    }
+                    const blend = 1 - Math.exp(-elapsed / 850);
+                    this.velocityYaw += (this.targetYaw - this.velocityYaw) * blend;
+                    this.velocityPitch += (this.targetPitch - this.velocityPitch) * blend;
+                    this.yaw += this.velocityYaw * elapsed;
+                    this.pitch += this.velocityPitch * elapsed;
+                }
+                if (needsReset || !this.reducedMotion.matches)
+                    this.draw();
+            }
+            this.frame = requestAnimationFrame(this.animate);
+        };
+        this.wheel = (e) => { e.preventDefault(); this.pause(); this.zoom = Math.max(.45, Math.min(3.5, this.zoom * Math.exp(-e.deltaY * .0012))); this.schedule(); };
+        this.down = (e) => { this.pause(); this.canvas.setPointerCapture(e.pointerId); this.start = { x: e.clientX, y: e.clientY, panX: this.panX, panY: this.panY, yaw: this.yaw, pitch: this.pitch, rotate: e.shiftKey || e.button === 2 }; this.tip.hidden = true; };
         this.move = (e) => { this.lastX = e.clientX; this.lastY = e.clientY; if (this.start) {
             const dx = e.clientX - this.start.x, dy = e.clientY - this.start.y;
             if (this.start.rotate) {
                 this.yaw = this.start.yaw + dx * .007;
-                this.pitch = Math.max(-1.4, Math.min(1.4, this.start.pitch + dy * .007));
+                this.pitch = this.start.pitch + dy * .007;
             }
             else {
                 this.panX = this.start.panX + dx;
@@ -100,13 +148,13 @@ class PaperGraph3D {
             this.schedule();
             return;
         } this.hover(e.clientX, e.clientY); };
-        this.up = (e) => { const s = this.start; this.start = null; if (this.canvas.hasPointerCapture(e.pointerId))
+        this.up = (e) => { const s = this.start; this.start = null; this.pause(); if (this.canvas.hasPointerCapture(e.pointerId))
             this.canvas.releasePointerCapture(e.pointerId); if (s && !s.rotate && e.button === 0 && Math.hypot(e.clientX - s.x, e.clientY - s.y) < 6) {
             const node = this.hit(e.clientX, e.clientY);
             if (node)
                 this.open(node.item.path);
         } this.hover(e.clientX, e.clientY); };
-        this.cancel = () => { this.start = null; this.tip.hidden = true; };
+        this.cancel = () => { this.start = null; this.pause(); this.tip.hidden = true; };
         this.leave = () => { if (!this.start)
             this.tip.hidden = true; };
         this.contextMenu = (e) => e.preventDefault();
@@ -132,7 +180,7 @@ class PaperGraph3D {
             this.open(this.items[0].path);
         }
         else
-            return; e.preventDefault(); this.schedule(); };
+            return; e.preventDefault(); this.pause(); this.schedule(); };
         host.addClass('rd-graph3d');
         this.canvas = host.createEl('canvas', { cls: 'rd-graph3d-canvas', attr: { tabindex: '0', role: 'img', 'aria-label': `3D 논문 그래프. PDF ${items.filter(n => n.kind === 'pdf').length}개와 리포트 ${items.filter(n => n.kind === 'report').length}개. 휠로 확대, 드래그로 이동, Shift+드래그로 회전합니다.` } });
         this.tip = host.createDiv({ cls: 'rd-graph3d-tip' });
@@ -150,13 +198,19 @@ class PaperGraph3D {
         this.canvas.addEventListener('pointerleave', this.leave);
         this.canvas.addEventListener('contextmenu', this.contextMenu);
         this.canvas.addEventListener('keydown', this.key);
+        this.direction = Math.random() * Math.PI * 2;
+        this.velocityYaw = this.targetYaw = Math.cos(this.direction) * .0015;
+        this.velocityPitch = this.targetPitch = Math.sin(this.direction) * .0015;
+        this.nextTurn = performance.now() + 7500;
         this.observer = new ResizeObserver(() => this.draw());
         this.observer.observe(host);
         this.draw();
+        this.frame = requestAnimationFrame(this.animate);
     }
-    destroy() { this.disposed = true; this.observer.disconnect(); this.canvas.removeEventListener('wheel', this.wheel); this.canvas.removeEventListener('pointerdown', this.down); this.canvas.removeEventListener('pointermove', this.move); this.canvas.removeEventListener('pointerup', this.up); this.canvas.removeEventListener('pointercancel', this.cancel); this.canvas.removeEventListener('pointerleave', this.leave); this.canvas.removeEventListener('contextmenu', this.contextMenu); this.canvas.removeEventListener('keydown', this.key); this.host.empty(); }
+    destroy() { this.disposed = true; cancelAnimationFrame(this.frame); this.observer.disconnect(); this.canvas.removeEventListener('wheel', this.wheel); this.canvas.removeEventListener('pointerdown', this.down); this.canvas.removeEventListener('pointermove', this.move); this.canvas.removeEventListener('pointerup', this.up); this.canvas.removeEventListener('pointercancel', this.cancel); this.canvas.removeEventListener('pointerleave', this.leave); this.canvas.removeEventListener('contextmenu', this.contextMenu); this.canvas.removeEventListener('keydown', this.key); this.host.empty(); }
     schedule() { if (this.scheduled || this.disposed)
         return; this.scheduled = true; requestAnimationFrame(() => { this.scheduled = false; this.draw(); }); }
+    pause() { this.resumeAt = performance.now() + 4500; }
     hit(x, y) { const rect = this.canvas.getBoundingClientRect(), px = x - rect.left, py = y - rect.top; return this.points.filter(p => Math.hypot(p.px - px, p.py - py) <= Math.max(13, p.r + 6)).sort((a, b) => b.z - a.z)[0]; }
     hover(x, y) { const p = this.hit(x, y); if (!p) {
         this.tip.hidden = true;
@@ -167,25 +221,31 @@ class PaperGraph3D {
         if (this.disposed)
             return;
         const rect = this.host.getBoundingClientRect(), w = Math.max(1, Math.floor(rect.width)), h = Math.max(1, Math.floor(rect.height)), dpr = Math.min(2, devicePixelRatio || 1);
-        this.canvas.width = Math.round(w * dpr);
-        this.canvas.height = Math.round(h * dpr);
+        const pixelWidth = Math.round(w * dpr), pixelHeight = Math.round(h * dpr);
+        if (this.canvas.width !== pixelWidth || this.canvas.height !== pixelHeight) {
+            this.canvas.width = pixelWidth;
+            this.canvas.height = pixelHeight;
+        }
         const ctx = this.canvas.getContext('2d');
         if (!ctx)
             return;
-        ctx.scale(dpr, dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, w, h);
-        const gradient = ctx.createRadialGradient(w * .5, h * .48, 5, w * .5, h * .5, Math.max(w, h) * .72);
-        gradient.addColorStop(0, '#343c57');
-        gradient.addColorStop(1, '#202534');
-        ctx.fillStyle = gradient;
+        ctx.fillStyle = '#23332f';
         ctx.fillRect(0, 0, w, h);
-        const groups = [...new Set(this.items.map(i => i.group))].sort(), groupCounts = new Map(), centers = new Map(groups.map((g, j) => { const a = j * 2.399963229728653; return [g, { x: Math.cos(a) * .58, y: Math.sin(a) * .42, z: Math.sin(a * 1.3) * .35 }]; }));
-        const scale = Math.min(w, h) * .54 * this.zoom, project = (item) => {
+        const groups = [...new Set(this.items.map(i => i.group))].sort(), groupCounts = new Map();
+        const counts = new Map(groups.map(g => [g, this.items.filter(i => i.group === g).length]));
+        const centers = new Map(groups.map((g, j) => { const y = 1 - 2 * (j + .5) / groups.length, a = j * 2.399963229728653, r = Math.sqrt(1 - y * y); return [g, { x: Math.cos(a) * r, y, z: Math.sin(a) * r }]; }));
+        const scale = Math.min(w, h) * .46 * this.zoom;
+        const project = (item) => {
             const ix = groupCounts.get(item.group) || 0;
             groupCounts.set(item.group, ix + 1);
-            const center = centers.get(item.group), a = ix * 2.399963229728653, r = .09 * Math.sqrt(ix), x = center.x + Math.cos(a) * r, y = center.y + Math.sin(a) * r, z = center.z + Math.sin(a * 1.7) * .16;
-            const cx = Math.cos(this.yaw), sx = Math.sin(this.yaw), cy = Math.cos(this.pitch), sy = Math.sin(this.pitch), xx = x * cx - z * sx, zz = x * sx + z * cx, yy = y * cy - zz * sy, depth = y * sy + zz * cy, perspective = 2.4 / (2.7 - depth);
-            return { item, x, y, z: depth, px: w * .5 + this.panX + xx * scale * perspective, py: h * .5 + this.panY + yy * scale * perspective, r: (item.kind === 'report' ? 6.5 : 4.3) * perspective };
+            const center = centers.get(item.group), a = ix * 2.399963229728653, cap = Math.min(.7, .19 + Math.sqrt((counts.get(item.group) || 1) / this.items.length) * .55), r = cap * Math.sqrt((ix + .5) / (counts.get(item.group) || 1));
+            const ref = Math.abs(center.y) > .9 ? { x: 1, y: 0, z: 0 } : { x: 0, y: 1, z: 0 };
+            const ux = ref.y * center.z - ref.z * center.y, uy = ref.z * center.x - ref.x * center.z, uz = ref.x * center.y - ref.y * center.x, ul = Math.hypot(ux, uy, uz), vx = center.y * uz - center.z * uy, vy = center.z * ux - center.x * uz, vz = center.x * uy - center.y * ux;
+            const tx = ux / ul * Math.cos(a) + vx / ul * Math.sin(a), ty = uy / ul * Math.cos(a) + vy / ul * Math.sin(a), tz = uz / ul * Math.cos(a) + vz / ul * Math.sin(a), normal = Math.hypot(center.x + r * tx, center.y + r * ty, center.z + r * tz), x = (center.x + r * tx) / normal, y = (center.y + r * ty) / normal, z = (center.z + r * tz) / normal;
+            const cx = Math.cos(this.yaw), sx = Math.sin(this.yaw), cy = Math.cos(this.pitch), sy = Math.sin(this.pitch), xx = x * cx - z * sx, zz = x * sx + z * cx, yy = y * cy - zz * sy, depth = y * sy + zz * cy, perspective = 2.5 / (2.9 - depth);
+            return { item, x, y, z: depth, px: w * .5 + this.panX + xx * scale * perspective, py: h * .5 + this.panY + yy * scale * perspective, r: (item.kind === 'report' ? 5.5 : 3.6) * perspective };
         };
         this.points = this.items.map(project);
         const byId = new Map(this.points.map(p => [p.item.id, p]));
@@ -196,25 +256,22 @@ class PaperGraph3D {
             ctx.beginPath();
             ctx.moveTo(a.px, a.py);
             ctx.lineTo(b.px, b.py);
-            ctx.strokeStyle = edge.kind === 'source' ? 'rgba(241,190,107,.5)' : 'rgba(124,163,211,.23)';
-            ctx.lineWidth = edge.kind === 'source' ? 1.4 : .8;
+            ctx.strokeStyle = edge.kind === 'source' ? 'rgba(226,188,126,.38)' : 'rgba(178,202,190,.2)';
+            ctx.lineWidth = edge.kind === 'source' ? 1.2 : .8;
             ctx.stroke();
         }
         const ordered = [...this.points].sort((a, b) => a.z - b.z);
         for (const p of ordered) {
             const idx = groups.indexOf(p.item.group), color = palette[idx % palette.length];
             ctx.beginPath();
-            ctx.arc(p.px, p.py, Math.max(2.5, p.r), 0, Math.PI * 2);
+            ctx.arc(p.px, p.py, Math.max(2.2, p.r), 0, Math.PI * 2);
             ctx.fillStyle = color;
-            ctx.globalAlpha = Math.max(.44, Math.min(1, .76 + p.z * .16));
-            ctx.shadowColor = color;
-            ctx.shadowBlur = p.item.kind === 'report' ? 14 : 7;
+            ctx.globalAlpha = Math.max(.48, Math.min(1, .7 + p.z * .2));
             ctx.fill();
-            ctx.shadowBlur = 0;
             ctx.globalAlpha = 1;
             if (p.item.kind === 'pdf') {
-                ctx.strokeStyle = 'rgba(255,255,255,.78)';
-                ctx.lineWidth = 1;
+                ctx.strokeStyle = 'rgba(255,255,255,.48)';
+                ctx.lineWidth = .8;
                 ctx.stroke();
             }
         }
@@ -1224,7 +1281,7 @@ const dashboard_extras_1 = require("./dashboard-extras");
 const library_1 = require("./library");
 const DESKTOP = 'research-dashboard';
 const PC = 'Dashboard/연구 홈.canvas', MOBILE = 'Dashboard/모바일 홈.md';
-const MODULES = { tasks: ['할 일', '완료는 오늘까지 · 미완료는 내일로', 'check-square'], weekly: ['이번 주 기록', '완료한 날짜를 기준으로', 'chart-no-axes-column'], projects: ['프로젝트', '프로젝트별 월간·주간 계획', 'folder-kanban'], connections: ['연결된 노트', '프로젝트·회의·논문 사이', 'network'], meetings: ['회의록', '결정과 후속 업무를 이어서', 'messages-square'], papers: ['논문', '분석과 읽기를 구분해서', 'book-open'] };
+const MODULES = { tasks: ['할 일', '완료는 오늘까지 · 미완료는 내일로', 'check-square'], weekly: ['이번 주 기록', '완료한 날짜를 기준으로', 'chart-no-axes-column'], projects: ['프로젝트', '프로젝트별 월간·주간 계획', 'folder-kanban'], connections: ['연결된 노트', '프로젝트·회의·논문 사이', 'network'], meetings: ['회의록', '결정과 후속 업무를 이어서', 'messages-square'], queue: ['분석 대기', '원본 PDF를 확인하고 원하는 논문만 분석', 'file-clock'], papers: ['분석 완료', '완성된 논문 리포트', 'book-open'] };
 MODULES.calendar = ['달력', '날짜별 회의와 할 일 기록', 'calendar-days'];
 MODULES.schedules = ['회의 일정', '예정된 만남과 준비', 'calendar-clock'];
 MODULES.graph = ['그래프뷰', '공통 주제·개념으로 찾는 논문 연결', 'network'];
@@ -1496,14 +1553,14 @@ class ModuleView extends obsidian_1.MarkdownRenderChild {
         (0, obsidian_1.setIcon)(icon, meta[2]);
         const heading = h.createEl('h2');
         if (this.kind === 'papers') {
-            const open = heading.createEl('button', { cls: 'rd-library-open', text: meta[0], attr: { type: 'button', 'aria-label': 'PDF와 분석된 논문 목록 열기', title: '왼쪽 사이드바에서 PDF 보관함 열기' } });
+            const open = heading.createEl('button', { cls: 'rd-library-open', text: meta[0], attr: { type: 'button', 'aria-label': '분석된 논문 목록 열기', title: '왼쪽 사이드바에서 논문 보관함 열기' } });
             open.onclick = () => void this.act(() => this.dashboard.openLibrary());
         }
         else
             heading.textContent = meta[0];
-        if (!['papers', 'graph'].includes(this.kind))
+        if (!['papers', 'queue', 'graph'].includes(this.kind))
             root.createEl('p', { text: meta[1], cls: 'rd-subtitle' });
-        else if (this.kind === 'papers')
+        else if (this.kind === 'queue')
             h.createDiv({ cls: 'rd-paper-connection' });
         this.error = root.createEl('p', { cls: 'rd-error', attr: { role: 'alert' } });
         this.error.hidden = true;
@@ -1526,10 +1583,16 @@ class ModuleView extends obsidian_1.MarkdownRenderChild {
         if (this.kind === 'meetings') {
             const add = h.createEl('button', { text: '새 회의록', cls: 'rd-new-meeting', attr: { type: 'button', 'aria-haspopup': 'dialog' } });
             add.onclick = () => new record_dialogs_1.MeetingCreateModal(this.dashboard.app, async (title) => { await this.dashboard.newNote('Meetings', title); this.dashboard.refresh(); }).open();
+            const toggle = h.createEl('button', { cls: 'rd-meeting-toggle', attr: { type: 'button', 'aria-label': '회의록 접기', 'aria-expanded': 'true', title: '회의록 접기' } });
+            (0, obsidian_1.setIcon)(toggle, 'chevron-up');
+            const collapsed = !!saved.meetingsCollapsed;
+            const apply = (value) => { root.classList.toggle('is-collapsed', value); root.closest('.rd-desktop-right')?.classList.toggle('is-meetings-collapsed', value); root.closest('.rd-desktop-grid')?.classList.toggle('is-meetings-collapsed', value); toggle.setAttribute('aria-expanded', String(!value)); toggle.setAttribute('aria-label', value ? '회의록 펼치기' : '회의록 접기'); toggle.title = value ? '회의록 펼치기' : '회의록 접기'; (0, obsidian_1.setIcon)(toggle, value ? 'chevron-down' : 'chevron-up'); };
+            apply(collapsed);
+            toggle.onclick = () => { const next = !root.classList.contains('is-collapsed'); apply(next); const current = this.dashboard.app.loadLocalStorage('research-dashboard-view') || {}; this.dashboard.app.saveLocalStorage('research-dashboard-view', { ...current, meetingsCollapsed: next }); };
         }
         this.register(this.dashboard.subscribe(() => void this.render()));
         void this.render();
-        if (this.kind === 'papers')
+        if (this.kind === 'queue')
             this.registerInterval(window.setInterval(() => void this.renderWorker(), 5000));
     }
     onunload() { this.alive = false; this.ticket++; this.projectResize?.disconnect(); this.graph3d?.destroy(); }
@@ -1696,33 +1759,29 @@ class ModuleView extends obsidian_1.MarkdownRenderChild {
                 }
                 this.button(this.body, '그래프 펼치기', async () => { await this.dashboard.app.workspace.getLeaf('split').setViewState({ type: 'graph', active: true }); }, 'network');
             }
-            else if (this.kind === 'papers') {
-                const pdfs = s.pdfs.filter(f => f.path.startsWith('PDF/')).sort((a, b) => a.basename.localeCompare(b.basename, 'ko'));
+            else if (this.kind === 'queue') {
+                const pdfs = s.pdfs.filter(f => f.path.startsWith('PDF/') && !s.pdfLinks[f.path]).sort((a, b) => a.basename.localeCompare(b.basename, 'ko'));
                 const requests = await this.dashboard.pdfRequests();
-                if (pdfs.length) {
-                    this.body.createEl('h3', { cls: 'rd-paper-section', text: '원본 PDF' });
-                    for (const pdf of pdfs) {
-                        const row = this.body.createDiv({ cls: 'rd-paper-row rd-pdf-row' });
-                        this.link(row, pdf, pdf.basename);
-                        const active = requests.find((x) => x.request.version === 2 && x.request.path === pdf.path);
-                        const report = s.pdfLinks[pdf.path];
-                        const button = row.createEl('button', { cls: 'rd-pdf-analyze', text: report ? '리포트' : active ? String({ pending: '전송 대기', queued: '접수 대기', running: '분석 중', review: '검증 중', publishing: '게시 중', waiting: '확인 대기', blocked: '조치 필요', complete: '완료' }[active.status.state] || '상태 보기') : '분석', attr: { type: 'button', 'aria-label': `${pdf.basename} ${report ? '리포트 열기' : active ? '분석 상태 보기' : '분석 시작'}` } });
-                        button.onclick = () => report ? void this.act(() => this.dashboard.open(report)) : active ? void this.act(() => this.dashboard.openAnalysisStatus()) : void this.act(() => this.dashboard.requestPdf(pdf));
-                    }
+                if (!pdfs.length)
+                    this.empty('대기 중인 원본 PDF가 없습니다. PDF 폴더에 넣으면 여기에 나타납니다.');
+                for (const pdf of pdfs) {
+                    const row = this.body.createDiv({ cls: 'rd-paper-row rd-pdf-row' });
+                    this.link(row, pdf, pdf.basename);
+                    const active = requests.find((x) => x.request.version === 2 && x.request.path === pdf.path);
+                    const button = row.createEl('button', { cls: 'rd-pdf-analyze', text: active ? String({ pending: '전송 대기', queued: '접수 대기', running: '분석 중', review: '검증 중', publishing: '게시 중', waiting: '확인 대기', blocked: '조치 필요', complete: '완료' }[active.status.state] || '상태 보기') : '분석', attr: { type: 'button', 'aria-label': `${pdf.basename} ${active ? '분석 상태 보기' : '분석 시작'}` } });
+                    button.onclick = () => active ? void this.act(() => this.dashboard.openAnalysisStatus()) : void this.act(() => this.dashboard.requestPdf(pdf));
                 }
-                if (s.papers.length)
-                    this.body.createEl('h3', { cls: 'rd-paper-section', text: '분석 리포트' });
-                if (!s.papers.length && !pdfs.length)
-                    this.empty('PDF 폴더에 파일을 넣으면 여기서 열고, 원하는 논문만 분석할 수 있습니다.');
+                await this.renderWorker();
+            }
+            else if (this.kind === 'papers') {
+                if (!s.papers.length)
+                    this.empty('완료된 논문 리포트가 없습니다.');
                 for (const p of s.papers) {
                     const row = this.body.createDiv({ cls: 'rd-paper-row' });
                     const fm = this.dashboard.app.metadataCache.getFileCache(p)?.frontmatter;
                     row.dataset.reportId = String(fm?.report_id || '');
                     this.link(row, p, String(fm?.library_title || p.basename));
-                    const analysis = row.createEl('button', { cls: 'rd-paper-analysis', text: '상태 확인', type: 'button' });
-                    analysis.onclick = () => new library_1.WorkerJobs(this.dashboard.app).open();
                 }
-                await this.renderWorker();
             }
             this.body.scrollTop = previousScroll;
         }
@@ -1941,7 +2000,7 @@ class DesktopDashboard extends obsidian_1.ItemView {
     getViewType() { return DESKTOP; }
     getDisplayText() { return '대시보드'; }
     getIcon() { return 'house'; }
-    async onOpen() { this.contentEl.empty(); this.contentEl.classList.add('rd-desktop'); const grid = this.contentEl.createDiv({ cls: 'rd-desktop-grid' }); for (const kind of ['home', 'tasks', 'weekly', 'projects', 'graph', 'schedules', 'meetings', 'calendar', 'papers']) {
+    async onOpen() { this.contentEl.empty(); this.contentEl.classList.add('rd-desktop'); const grid = this.contentEl.createDiv({ cls: 'rd-desktop-grid' }); for (const kind of ['home', 'graph', 'tasks', 'weekly', 'projects', 'queue', 'calendar', 'schedules', 'meetings', 'papers']) {
         let parent = grid;
         if (['schedules', 'meetings', 'papers'].includes(kind))
             parent = grid.querySelector('.rd-desktop-right') || grid.createDiv({ cls: 'rd-desktop-right' });
