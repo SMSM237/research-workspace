@@ -180,7 +180,7 @@ class PaperGraph3D {
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, w, h);
         const groups = [...new Set(this.items.map(i => i.group))].sort(), groupCounts = new Map(), centers = new Map(groups.map((g, j) => { const a = j * 2.399963229728653; return [g, { x: Math.cos(a) * .58, y: Math.sin(a) * .42, z: Math.sin(a * 1.3) * .35 }]; }));
-        const scale = Math.min(w, h) * .37 * this.zoom, project = (item) => {
+        const scale = Math.min(w, h) * .54 * this.zoom, project = (item) => {
             const ix = groupCounts.get(item.group) || 0;
             groupCounts.set(item.group, ix + 1);
             const center = centers.get(item.group), a = ix * 2.399963229728653, r = .09 * Math.sqrt(ix), x = center.x + Math.cos(a) * r, y = center.y + Math.sin(a) * r, z = center.z + Math.sin(a * 1.7) * .16;
