@@ -803,9 +803,9 @@ body.is-mobile .workspace-leaf-content[data-type="paper-analysis-control"] .view
 
 /* The fixed top pair is independent from the three-column work area. */
 .rd-desktop-grid{
-  grid-template-areas:'top top top' 'tasks weekly schedules' 'tasks projects meetings' 'calendar projects meetings' 'calendar queue papers';
-  grid-template-rows:230px minmax(220px,1fr) minmax(110px,.7fr) minmax(110px,.7fr) minmax(230px,1fr);
-  min-height:980px;
+  grid-template-areas:'top top top' 'tasks weekly schedules' 'tasks projects meetings' 'tasks projects meetings' 'calendar queue papers';
+  grid-template-rows:230px minmax(235px,1fr) minmax(110px,.7fr) minmax(110px,.7fr) 350px;
+  min-height:1091px;
 }
 .rd-desktop-top{grid-area:top;display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:14px;min-width:0;min-height:0}
 .rd-desktop-top>.rd-desktop-card{min-width:0;min-height:0;height:230px}
