@@ -36,7 +36,7 @@ def reader_page():
           document.querySelector('.callout-title').onclick=e=>e.currentTarget.parentElement.classList.toggle('is-collapsed');
         }''')
         page.add_script_tag(content=(ROOT.parent/'dashboard/plugin/main.js').read_text(encoding='utf-8'))
-        page.evaluate('''async()=>{window.reader=new exports.default();await reader.onload();reader.processor(document.querySelector('main'),{sourcePath:'Papers/P1.md',frontmatter:{cssclasses:['figure-first-report'],report_id:'P1'},addChild:c=>{children.push(c);c.onload();}});}''')
+        page.evaluate('''async()=>{window.reader=new exports.default();await reader.onload();reader.processor(document.querySelector('main'),{sourcePath:'Paper reports/P1.md',frontmatter:{cssclasses:['figure-first-report'],report_id:'P1'},addChild:c=>{children.push(c);c.onload();}});}''')
         page.get_by_role('button',name='원문 PDF · p.2',exact=True).wait_for()
         yield page
         browser.close()
@@ -57,7 +57,7 @@ def test_compiled_plugin_zoom_source_depth_and_cleanup(reader_page):
     if os.environ.get('RR_COMPONENT_CAPTURE'):
         page.screenshot(path=str(Path(os.environ['RR_COMPONENT_CAPTURE'])/'reader-component.png'))
     page.get_by_role('button',name='원문 PDF · p.2',exact=True).click()
-    assert page.evaluate('events.links')==[['Sources/P1/D001.pdf#page=2','Papers/P1.md','tab']]
+    assert page.evaluate('events.links')==[['Sources/P1/D001.pdf#page=2','Paper reports/P1.md','tab']]
     page.get_by_role('button',name='상세',exact=True).click()
     assert 'is-collapsed' not in page.locator('.callout').get_attribute('class')
     page.get_by_role('button',name='요약',exact=True).click()
@@ -80,7 +80,7 @@ def test_preference_failure_is_visible_and_later_save_recovers(reader_page):
 
 def test_missing_pdf_disables_source_without_losing_zoom(reader_page):
     page=reader_page
-    page.evaluate('''()=>{children.forEach(c=>c.unload());const original=host.vault.getAbstractFileByPath;host.vault.getAbstractFileByPath=p=>p.endsWith('.pdf')?null:original(p);reader.processor(document.querySelector('main'),{sourcePath:'Papers/P1.md',frontmatter:{cssclasses:['figure-first-report'],report_id:'P1'},addChild:c=>{children.push(c);c.onload();}});}''')
+    page.evaluate('''()=>{children.forEach(c=>c.unload());const original=host.vault.getAbstractFileByPath;host.vault.getAbstractFileByPath=p=>p.endsWith('.pdf')?null:original(p);reader.processor(document.querySelector('main'),{sourcePath:'Paper reports/P1.md',frontmatter:{cssclasses:['figure-first-report'],report_id:'P1'},addChild:c=>{children.push(c);c.onload();}});}''')
     assert page.get_by_role('button',name='원문 PDF 미등록',exact=True).is_disabled()
     page.get_by_role('button',name='테스트 Figure 확대',exact=True).click()
     assert page.locator('.rr-image-modal').is_visible()
@@ -88,7 +88,7 @@ def test_missing_pdf_disables_source_without_losing_zoom(reader_page):
 
 def test_invalid_index_reports_problem_without_injecting_controls(reader_page):
     page=reader_page
-    page.evaluate('''()=>{children.forEach(c=>c.unload());host.vault.adapter.stat=async()=>({mtime:2,size:300});host.vault.adapter.read=async()=>'{broken';reader.processor(document.querySelector('main'),{sourcePath:'Papers/P1.md',frontmatter:{cssclasses:['figure-first-report'],report_id:'P1'},addChild:c=>{children.push(c);c.onload();}});}''')
+    page.evaluate('''()=>{children.forEach(c=>c.unload());host.vault.adapter.stat=async()=>({mtime:2,size:300});host.vault.adapter.read=async()=>'{broken';reader.processor(document.querySelector('main'),{sourcePath:'Paper reports/P1.md',frontmatter:{cssclasses:['figure-first-report'],report_id:'P1'},addChild:c=>{children.push(c);c.onload();}});}''')
     page.get_by_role('status').wait_for()
     assert page.locator('.rr-figure-tools').count()==0
     assert page.locator('#figure').count()==1

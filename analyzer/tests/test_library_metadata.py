@@ -8,7 +8,7 @@ def data():return json.loads((ROOT/'examples/demo.analysis.json').read_text(enco
 def test_library_filename_and_metadata_readback(tmp_path):
     d=data();d['paper']['library_title']='[Journal] 논문 핵심 키워드';d['paper']['bibliography']={'journal':'Journal','impact_factor':None,'impact_factor_year':None,'quartiles':[],'author_affiliations':['A — University'],'metric_source':'unverified','metric_checked':'2026-09-09'}
     p=build_report(d,ROOT/'assets',tmp_path)
-    assert p['markdown']=='Papers/[Journal] 논문 핵심 키워드.md'
+    assert p['markdown']=='Paper reports/[Journal] 논문 핵심 키워드.md'
     md=(tmp_path/p['markdown']).read_text(encoding='utf-8');assert 'journal: "Journal"' in md and 'impact_factor: null' in md
     assert json.loads((tmp_path/p['manifest']).read_text(encoding='utf-8'))['markdown_path']==p['markdown']
     assert build_report(d,ROOT/'assets',tmp_path)==p

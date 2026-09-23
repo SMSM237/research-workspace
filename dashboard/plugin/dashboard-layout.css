@@ -1,23 +1,38 @@
-/* A shared grid aligns the right and middle cards. Collapsed minutes let
-   completed papers occupy the freed space without resizing other cards. */
+/* The fixed top pair is independent from the three-column work area. */
 .rd-desktop-grid{
-  grid-template-areas:'home home graph' 'tasks weekly schedules' 'tasks projects meetings' 'calendar projects meetings' 'calendar queue papers';
-  grid-template-rows:minmax(210px,220fr) minmax(145px,155fr) minmax(100px,110fr) minmax(100px,110fr) minmax(190px,210fr);
-  min-height:820px;
+  grid-template-areas:'top top top' 'tasks weekly schedules' 'tasks projects meetings' 'calendar projects meetings' 'calendar queue papers';
+  grid-template-rows:230px minmax(220px,1fr) minmax(110px,.7fr) minmax(110px,.7fr) minmax(230px,1fr);
+  min-height:980px;
 }
+.rd-desktop-top{grid-area:top;display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:14px;min-width:0;min-height:0}
+.rd-desktop-top>.rd-desktop-card{min-width:0;min-height:0;height:230px}
+.rd-desktop-top>.rd-desktop-card[data-card=home]{grid-area:1 / 1}
+.rd-desktop-top>.rd-desktop-card[data-card=graph]{grid-area:1 / 2;width:230px;aspect-ratio:1;align-self:start}
+.rd-desktop-card[data-card=calendar]{width:100%;height:350px;min-height:350px;max-height:350px;aspect-ratio:auto;align-self:start;justify-self:stretch}
+.rd-desktop-card[data-card=weekly] .rd-daily-chart{flex:0 0 120px;height:120px;min-height:120px}
+.rd-desktop-card[data-card=weekly] .rd-daily-track{flex:none;height:82px;min-height:82px;max-height:82px}
+.rd-desktop-card[data-card=weekly] .rd-week-legend{margin-top:8px}
 .rd-desktop-card[data-card=queue]{grid-area:queue}
 .rd-desktop-card[data-card=home] .rd-greeting{display:block}
 .rd-desktop-card[data-card=home] .rd-weather-actions{display:flex;flex-wrap:wrap;gap:3px 10px;margin-top:4px;font-size:12px}
 .rd-desktop-card[data-card=home] .rd-weather-actions button{white-space:nowrap}
 .rd-desktop-card[data-card=home] .rd-verse{margin-top:10px!important}
+.rd-desktop-card[data-card=home]{position:relative}
+.rd-activity{position:static;padding-bottom:18px}
+.rd-activity>.rd-small{padding-right:110px}
+.rd-personal-file-count{position:absolute;right:20px;bottom:18px;margin:0!important;font-size:11px!important;font-weight:650;color:var(--rc-green)!important;white-space:nowrap;font-variant-numeric:tabular-nums}
+.rd-card-count{display:inline-block;margin-left:8px;padding:2px 7px;border-radius:7px;background:var(--rc-field);font-size:12px;font-weight:700;color:var(--rc-muted);vertical-align:middle;font-variant-numeric:tabular-nums}
+.rd-module[data-module=queue] .rd-card-count{background:#e5f3ed;color:#155a45}
+.rd-module[data-module=papers] .rd-card-count{background:#e8eef9;color:#285aa5}
 .rd-desktop-right{display:contents}
 .rd-desktop-right>.rd-desktop-card{min-height:0}
 .rd-desktop-card[data-card=schedules]{grid-area:schedules}
 .rd-desktop-card[data-card=meetings]{grid-area:meetings}
 .rd-desktop-card[data-card=papers]{grid-area:papers}
-.rd-module[data-module=meetings].is-collapsed .rd-body,.rd-module[data-module=meetings].is-collapsed .rd-subtitle{display:none}
-.rd-module[data-module=meetings].is-collapsed{padding-block:0!important;justify-content:center}
-.rd-module[data-module=meetings].is-collapsed .rd-module-heading{margin-bottom:0;min-height:40px}
+.rd-module:is([data-module=meetings],[data-module=projects]).is-collapsed .rd-body,.rd-module:is([data-module=meetings],[data-module=projects]).is-collapsed .rd-subtitle{display:none}
+.rd-module:is([data-module=meetings],[data-module=projects]).is-collapsed{padding-block:0!important;justify-content:center}
+.rd-module:is([data-module=meetings],[data-module=projects]).is-collapsed .rd-module-heading{margin-bottom:0;min-height:40px}
+.rd-module[data-module=projects].is-collapsed .rd-project-choice{display:none}
 .rd-module .rd-meeting-toggle{order:9;width:40px;min-width:40px;height:40px;min-height:40px;padding:8px!important;border-radius:10px;background:transparent;box-shadow:none;color:var(--rc-muted)}
 .rd-module .rd-meeting-toggle svg{width:18px;height:18px}
 .rd-module .rd-meeting-toggle:hover{background:var(--rc-field);color:var(--rc-ink)}
@@ -32,6 +47,7 @@
 .rd-module[data-module=queue] .rd-paper-row,.rd-module[data-module=papers] .rd-paper-row{gap:8px}
 .rd-module[data-module=queue] .rd-empty,.rd-module[data-module=papers] .rd-empty{font-size:13px;line-height:1.5;white-space:normal}
 .rd-module[data-module=graph]{background:#23332f!important;--rd-accent:#a7d0bd;--rc-ink:#f0f6ef;--rc-muted:#b8cbc1;--rc-line:#486057;color:#f0f6ef}
+.research-home .rd-module[data-module=graph]{aspect-ratio:1;width:100%;height:auto;align-self:start}
 .rd-module[data-module=graph] .rd-module-heading{margin-bottom:4px;flex-wrap:nowrap}
 .rd-module[data-module=graph] .rd-module-heading h2{color:#f0f6ef!important}
 .rd-module[data-module=graph] .rd-icon,.rd-module[data-module=graph] .rd-network-expand{color:#c5d9cd}
@@ -40,25 +56,54 @@
 .rd-module[data-module=graph] .rd-graph3d-host,.rd-module[data-module=graph] .rd-graph3d,.rd-module[data-module=graph] .rd-graph3d-canvas{min-height:0;height:100%;background:#23332f;border-radius:0}
 .rd-module[data-module=graph] .rd-graph3d-canvas:focus-visible{outline:2px solid #d9eadf;outline-offset:-3px}
 .rd-module[data-module=graph] .rd-graph3d-tip{background:#17231f;color:#f1f6f0;border:1px solid #53695e;box-shadow:0 6px 14px rgba(0,0,0,.16)}
-.research-home .rd-module[data-module=graph] .rd-body,.research-home .rd-module[data-module=graph] .rd-graph3d-host,.research-home .rd-module[data-module=graph] .rd-graph3d,.research-home .rd-module[data-module=graph] .rd-graph3d-canvas{min-height:230px!important}
+.research-home .rd-module[data-module=graph] .rd-body,.research-home .rd-module[data-module=graph] .rd-graph3d-host,.research-home .rd-module[data-module=graph] .rd-graph3d,.research-home .rd-module[data-module=graph] .rd-graph3d-canvas{min-height:0!important}
 .rd-relation-expanded.rd-module{background:#23332f;color:#f0f6ef}
 .rd-relation-expanded .rd-graph3d,.rd-relation-expanded .rd-graph3d-canvas{background:#23332f}
 .rd-relation-expanded .rd-graph3d-canvas:focus-visible{outline:2px solid #d9eadf;outline-offset:-3px}
 @container(min-width:1051px){
   .rd-desktop-grid.is-meetings-collapsed .rd-desktop-card[data-card=meetings]{align-self:start;height:64px}
   .rd-desktop-grid.is-meetings-collapsed .rd-desktop-card[data-card=papers]{grid-row:3 / 6;grid-column:3;margin-top:76px}
+  .rd-desktop-grid.is-projects-collapsed .rd-desktop-card[data-card=projects]{align-self:start;height:64px}
+  .rd-desktop-grid.is-projects-collapsed .rd-desktop-card[data-card=queue]{grid-row:3 / 6;grid-column:2;margin-top:76px}
 }
 @container(max-width:1050px){
-  .rd-desktop-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:'home home' 'graph weekly' 'tasks side' 'projects side' 'calendar side' 'queue side';grid-template-rows:230px 250px 300px 280px 280px 270px;height:auto;min-height:0}
-  .rd-desktop-right{grid-area:side;display:grid;min-width:0;min-height:0;gap:12px;grid-template-areas:'schedules' 'meetings' 'papers';grid-template-rows:minmax(150px,.65fr) minmax(180px,.8fr) minmax(0,1fr)}
-  .rd-desktop-right.is-meetings-collapsed{grid-template-rows:minmax(150px,.65fr) 64px minmax(0,1.6fr)}
-}
-@container(max-width:530px){
-  .rd-desktop-grid{display:flex;flex-direction:column;gap:12px}
+  .rd-desktop-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:'top top' 'tasks weekly' 'projects schedules' 'calendar meetings' 'queue papers';grid-template-rows:230px 235px 250px 350px 280px;height:auto;min-height:0}
   .rd-desktop-right{display:contents}
-  .rd-desktop-card[data-card=graph]{min-height:255px;max-height:255px}
+  .rd-desktop-top .rd-activity>.rd-small{display:none}
+  .rd-desktop-top .rd-activity-grid{height:38px}
+  .rd-desktop-top .rd-activity-stats strong{font-size:20px}
+  .rd-desktop-grid.is-meetings-collapsed .rd-desktop-card[data-card=meetings]{align-self:start;height:64px}
+  .rd-desktop-grid.is-meetings-collapsed .rd-desktop-card[data-card=papers]{grid-row:4 / 6;grid-column:2;margin-top:76px}
+  .rd-desktop-grid.is-projects-collapsed .rd-desktop-card[data-card=projects]{align-self:start;height:64px}
+  .rd-desktop-grid.is-projects-collapsed .rd-desktop-card[data-card=queue]{grid-row:3 / 5;grid-column:1;margin-top:76px}
+  .rd-desktop-grid.is-projects-collapsed .rd-desktop-card[data-card=calendar]{grid-row:5;grid-column:1}
+}
+@container(max-width:800px){
+  .rd-desktop-top .rd-home-content{grid-template-columns:minmax(0,1fr) minmax(0,.82fr);gap:12px}
+  .rd-desktop-top .rd-home-content h1{font-size:24px!important}
+  .rd-desktop-top .rd-verse{font-size:12px;line-height:1.35}
+  .rd-desktop-top .rd-activity{padding-left:12px}
+  .rd-desktop-top .rd-activity-stats strong{font-size:18px}
+  .rd-desktop-top .rd-activity-grid{height:38px}
+  .rd-desktop-top .rd-activity>.rd-small{font-size:10px}
+  .rd-desktop-top .rd-activity>.rd-small{display:none}
+}
+@container(max-width:680px){
+  .rd-desktop-grid{display:flex;flex-direction:column;gap:12px}
+  .rd-desktop-top{display:flex;flex-direction:column;height:auto;align-items:stretch;gap:12px}
+  .rd-desktop-top>.rd-desktop-card[data-card=home]{height:auto;min-height:230px;max-height:none}
+  .rd-desktop-top>.rd-desktop-card[data-card=graph]{width:min(230px,100%);height:auto;min-height:0;max-height:none;align-self:center;flex:none}
+  .rd-desktop-right{display:contents}
+  .rd-desktop-card[data-card=weekly]{min-height:235px;max-height:none}
+  .rd-desktop-card[data-card=projects].is-collapsed,.rd-desktop-card[data-card=meetings].is-collapsed{min-height:64px;max-height:64px;width:100%;align-self:stretch}
+  .rd-desktop-card[data-card=schedules]{min-height:180px;max-height:none}
+  .rd-desktop-card[data-card=calendar]{width:100%;height:350px;min-height:350px;max-height:350px;flex:none;align-self:stretch}
   .rd-desktop-card[data-card=queue],.rd-desktop-card[data-card=papers]{min-height:210px;max-height:360px}
-  .rd-desktop-card[data-card=meetings].is-collapsed{min-height:64px;max-height:64px}
   .rd-module .rd-meeting-toggle{width:44px;min-width:44px;height:44px;min-height:44px}
 }
+@container(max-width:420px){.rd-desktop-top .rd-home-content{display:flex;flex-direction:column}.rd-desktop-top .rd-activity{border-left:0;padding-left:0;margin-top:8px}}
 @media(prefers-reduced-motion:reduce){.rd-module .rd-meeting-toggle{transition:none}}
+
+/* Keep working data available to the dashboard while the file explorer shows only user folders. */
+.nav-files-container .nav-folder:has(> .nav-folder-title:is([data-path="Dashboard"],[data-path="Inbox"],[data-path="Meetings"],[data-path="Notes"],[data-path="Papers"],[data-path="PDF"],[data-path="Projects"],[data-path="Resources"],[data-path="Sources"],[data-path="Tasks"],[data-path="Templates"],[data-path="Daily"])) ,
+.nav-files-container .nav-file:has(> .nav-file-title:is([data-path="README.md"],[data-path="시작.md"],[data-path="시작하기.md"])){display:none}

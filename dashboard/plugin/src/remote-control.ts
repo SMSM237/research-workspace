@@ -51,8 +51,10 @@ export class PaperRemoteControl {
   }
   async submitPdf(file:TFile):Promise<void> {
     if(this.submitBusy)return;
-    if(!PDF_PATH.test(file.path)||file.path.split('/').some(p=>p==='.'||p==='..'))throw Error('PDF 폴더의 파일만 분석 요청할 수 있습니다.');
+    if(!file.path.startsWith('Paper/')||!PDF_PATH.test(file.path)||file.path.split('/').some(p=>p==='.'||p==='..'))throw Error('Paper 폴더의 파일만 분석 요청할 수 있습니다.');
     if(file.stat.size>95*1024*1024)throw Error('95MB를 넘는 PDF는 Git 동기화 전에 크기를 확인해 주세요.');
+    const linksFile='Dashboard/pdf-links.json',adapter=this.plugin.app.vault.adapter;
+    if(await adapter.exists(linksFile)){const links=JSON.parse(await adapter.read(linksFile));if(links?.version!==1||!links.links||typeof links.links!=='object'||Array.isArray(links.links))throw Error('논문 연결 목록 형식을 확인해 주세요.');const report=links.links[file.path];if(typeof report==='string'&&this.plugin.app.vault.getAbstractFileByPath(report) instanceof TFile){new Notice('이미 분석된 PDF입니다. 완성 리포트에서 확인해 주세요.');return;}}
     this.submitBusy=true;
     try{
       const digest=await crypto.subtle.digest('SHA-256',await this.plugin.app.vault.readBinary(file));
@@ -159,7 +161,7 @@ class ControlView extends ItemView {
       if(status.completed!==undefined&&status.total!==undefined)row.createEl('p',{text:`${status.total}편 중 ${status.completed}편 완료`});
     }
     const info=body.createEl('details');info.createEl('summary',{text:'실행 조건과 파일 위치'});
-    info.createEl('p',{text:'Windows PC와 Obsidian·Codex가 실행 중이어야 합니다. PDF 폴더는 Git 동기화 대상이며, PC에 원본 PDF와 요청이 모두 도착해야 분석이 시작됩니다.'});
+    info.createEl('p',{text:'Windows PC와 Obsidian·Codex가 실행 중이어야 합니다. Paper 폴더는 Git 동기화 대상이며, PC에 원본 PDF와 요청이 모두 도착해야 분석이 시작됩니다.'});
     info.createEl('p',{text:'요청 저장은 분석 시작과 다릅니다. PC 접수와 Codex 실행 상태가 도착하면 표시가 바뀝니다. 다운로드·로그인 문제는 조치 필요 상태로 남습니다.'});
   }
 }

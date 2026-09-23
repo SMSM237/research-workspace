@@ -26,7 +26,7 @@ export class PaperGraph3D {
     this.canvas.addEventListener('pointerleave',this.leave);
     this.canvas.addEventListener('contextmenu',this.contextMenu);
     this.canvas.addEventListener('keydown',this.key);
-    this.direction=Math.random()*Math.PI*2;this.velocityYaw=this.targetYaw=Math.cos(this.direction)*.0015;this.velocityPitch=this.targetPitch=Math.sin(this.direction)*.0015;this.nextTurn=performance.now()+7500;
+    this.direction=Math.random()*Math.PI*2;this.velocityYaw=this.targetYaw=Math.cos(this.direction)*.00075;this.velocityPitch=this.targetPitch=Math.sin(this.direction)*.00075;this.nextTurn=performance.now()+7500;
     this.observer=new ResizeObserver(()=>this.draw());this.observer.observe(host);this.draw();this.frame=requestAnimationFrame(this.animate);
   }
   destroy(){this.disposed=true;cancelAnimationFrame(this.frame);this.observer.disconnect();this.canvas.removeEventListener('wheel',this.wheel);this.canvas.removeEventListener('pointerdown',this.down);this.canvas.removeEventListener('pointermove',this.move);this.canvas.removeEventListener('pointerup',this.up);this.canvas.removeEventListener('pointercancel',this.cancel);this.canvas.removeEventListener('pointerleave',this.leave);this.canvas.removeEventListener('contextmenu',this.contextMenu);this.canvas.removeEventListener('keydown',this.key);this.host.empty();}
@@ -36,7 +36,7 @@ export class PaperGraph3D {
       const needsReset=Math.abs(this.zoom-1)>.001||Math.abs(this.panX)>.25||Math.abs(this.panY)>.25;
       if(needsReset){const blend=this.reducedMotion.matches?1:1-Math.exp(-elapsed/1500);this.zoom+=(1-this.zoom)*blend;this.panX-=this.panX*blend;this.panY-=this.panY*blend;if(Math.abs(this.zoom-1)<.001)this.zoom=1;if(Math.abs(this.panX)<.25)this.panX=0;if(Math.abs(this.panY)<.25)this.panY=0;}
       if(!this.reducedMotion.matches){
-        if(now>=this.nextTurn){this.direction+=(Math.random()<.5?-1:1)*(1.1+Math.random()*(Math.PI*2-2.2));const speed=.0012+Math.random()*.0006;this.targetYaw=Math.cos(this.direction)*speed;this.targetPitch=Math.sin(this.direction)*speed;this.nextTurn=now+7000+Math.random()*5000;}
+        if(now>=this.nextTurn){this.direction+=(Math.random()<.5?-1:1)*(1.1+Math.random()*(Math.PI*2-2.2));const speed=.0006+Math.random()*.0003;this.targetYaw=Math.cos(this.direction)*speed;this.targetPitch=Math.sin(this.direction)*speed;this.nextTurn=now+7000+Math.random()*5000;}
         const blend=1-Math.exp(-elapsed/850);this.velocityYaw+=(this.targetYaw-this.velocityYaw)*blend;this.velocityPitch+=(this.targetPitch-this.velocityPitch)*blend;this.yaw+=this.velocityYaw*elapsed;this.pitch+=this.velocityPitch*elapsed;
       }
       if(needsReset||!this.reducedMotion.matches)this.draw();

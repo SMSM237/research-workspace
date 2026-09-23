@@ -48,16 +48,16 @@ def test_build_nomedia_relative_images_and_no_note_changes(report, tmp_path):
     note = tmp_path / 'Notes' / 'DEMO.md'; note.parent.mkdir(); note.write_text('MY NOTES')
     paths = build_report(report, ROOT / 'assets', tmp_path)
     assert (tmp_path / 'Resources/.nomedia').exists()
-    assert (tmp_path / 'Papers/DEMO.md').exists()
-    md = (tmp_path / 'Papers/DEMO.md').read_text(encoding='utf-8')
+    assert (tmp_path / 'Paper reports/DEMO.md').exists()
+    md = (tmp_path / 'Paper reports/DEMO.md').read_text(encoding='utf-8')
     assert '../Resources/DEMO/Fig01.png' in md
     assert note.read_text(encoding='utf-8') == 'MY NOTES'
-    assert paths['markdown'] == 'Papers/DEMO.md'
+    assert paths['markdown'] == 'Paper reports/DEMO.md'
 
 def test_managed_user_edit_is_protected(report, tmp_path):
     from figure_reports.build import build_report, ModifiedOutputError
     build_report(report, ROOT / 'assets', tmp_path)
-    out = tmp_path / 'Papers/DEMO.md'; out.write_text('USER EDIT', encoding='utf-8')
+    out = tmp_path / 'Paper reports/DEMO.md'; out.write_text('USER EDIT', encoding='utf-8')
     with pytest.raises(ModifiedOutputError): build_report(report, ROOT / 'assets', tmp_path)
     assert out.read_text(encoding='utf-8') == 'USER EDIT'
 
@@ -75,7 +75,7 @@ def test_output_symlink_escape_is_protected(report, tmp_path):
 def test_missing_asset_does_not_publish_partial_report(report, tmp_path):
     from figure_reports.build import build_report
     with pytest.raises(ValueError): build_report(report, tmp_path / 'absent', tmp_path / 'out')
-    assert not (tmp_path / 'out/Papers/DEMO.md').exists()
+    assert not (tmp_path / 'out/Paper reports/DEMO.md').exists()
 
 def test_every_internal_preview_link_resolves(report):
     import re

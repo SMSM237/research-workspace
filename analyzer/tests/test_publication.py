@@ -12,7 +12,7 @@ def setup(tmp):
     vault=tmp/'vault';vault.mkdir();p=tmp/'main.pdf'
     with pymupdf.open() as d:
         page=d.new_page();page.insert_text((40,50),'Test paper 2024. Author Example. Control and treatment are independent.');d.save(p)
-    w=LocalWorker(vault,tmp/'state');job=w.queue.enqueue(p,[]);w.tick();job=w.queue.get(job['id'])
+    w=LocalWorker(vault,tmp/'state');job=w.queue.enqueue(p,[]);w.prepare(job);job=w.queue.get(job['id'])
     a=dict(document_id='D001',page=1,kind='text',excerpt='Control and treatment are independent.')
     b=dict(text='대조군과 처치군을 구분합니다.',anchors=[a]);u=dict(id='F1',label='Figure 1',kind='main',document_id='D001',page=1,extra_pages=[],panels=['a'])
     f=dict(figure_id='F1',title='시험 그림',question='조건을 비교합니다.',takeaway=b,panels=[dict(label='a',observation='조건이 나뉩니다.',anchors=[a])],author_interpretation=[b],analyst_inference=[b],methods=[b],replicates=dict(reported_n='미보고',independent_unit='미보고',technical_nesting='미보고',pairing='미보고',uncertainty='미보고'),limitations=[b],terms=[],concepts=[])
@@ -70,12 +70,12 @@ def test_selected_pdf_links_to_published_report(tmp_path,monkeypatch):
     import shutil
     import figure_reports.publication as module
     w,j,packet,p=setup(tmp_path)
-    library=w.vault/'PDF';library.mkdir()
+    library=w.vault/'Paper';library.mkdir()
     original=library/'selected.pdf';shutil.copyfile(j['main'],original)
     monkeypatch.setattr(module,'sync_publication',lambda *args:{'status':'pending_git'})
     receipt=module.publish_checked(w,j,packet,p,Path(j['folder'])/'model-analysis')
     links=json.loads((w.vault/'Dashboard/pdf-links.json').read_text('utf-8'))
-    assert links['links']['PDF/selected.pdf']==receipt['markdown']
+    assert links['links']['Paper/selected.pdf']==receipt['markdown']
     assert (w.vault/receipt['markdown']).is_file()
 
 
@@ -124,4 +124,4 @@ def test_publication_requires_complete_generated_images_even_without_request_sid
     w,j,packet,p=setup(tmp_path);with_concept(packet,p)
     with pytest.raises(ValueError,match='complete.*concept image'):
         publish_checked(w,j,packet,p,Path(j['folder'])/'candidate')
-    assert not list((w.vault/'Papers').glob('*.md'))
+    assert not list((w.vault/'Paper reports').glob('*.md'))

@@ -8,7 +8,7 @@ test('future dates are not recorded until rollover and cannot inflate weekly bar
 test('real tasks exclude code, papers and reading records',()=>{const md='- [ ] 업무 📅 2026-09-10\n```\n- [ ] 예시\n```\n- [x] 끝 ✅ 2026-09-09';assert.equal(parseTasks('Meetings/A.md',md).length,2);assert.equal(parseTasks('Papers/A.md',md).length,0);assert.equal(parseTasks('Notes/독서 기록.md',md).length,0);});
 test('atomic checkbox edit preserves other lines and rejects stale text',()=>{const text='제목\r\n- [ ] 업무 ^task-ab\r\n메모';const t=parseTasks('Tasks/A.md',text)[0];const next=toggleTask(text,t,'2026-09-09');assert.equal(next,'제목\r\n- [x] 업무 ✅ 2026-09-09 ^task-ab\r\n메모');assert.equal(toggleTask(next,parseTasks('Tasks/A.md',next)[0]),text);assert.throws(()=>toggleTask(text+'changed', {...t,raw:'different'}));});
 test('weekly dates use local Monday and never mtime',()=>{const now=new Date(2026,8,9,0,1);assert.equal(weekDays(now)[0],'2026-09-07');const t=parseTasks('Tasks/A.md','- [x] undated\n- [x] old ✅ 2026-09-06\n- [x] current ✅ 2026-09-09');assert.deepEqual(weekCounts(t,now),[0,0,1,0,0,0,0]);assert.equal(validDay('2026-02-30'),false);});
-test('reading states roundtrip without editing reports or unrelated notes',()=>{const path='Papers/[ACS Nano] VPT.md';let text='# 독서 기록\n내 메모';text=setReading(text,path,'reading','2026-09-09');assert.equal(readingState(text,path).state,'reading');text=setReading(text,path,'done','2026-09-09');assert.equal(readingState(text,path).completed,'2026-09-09');assert.ok(text.includes('내 메모'));text=setReading(text,path,'unread');assert.equal(readingState(text,path).completed,'');assert.throws(()=>setReading(text,'../A.md','done'));assert.throws(()=>readingState(text+'\n'+text,path));});
+test('reading states roundtrip without editing reports or unrelated notes',()=>{const path='Paper reports/[ACS Nano] VPT.md';let text='# 독서 기록\n내 메모';text=setReading(text,path,'reading','2026-09-09');assert.equal(readingState(text,path).state,'reading');text=setReading(text,path,'done','2026-09-09');assert.equal(readingState(text,path).completed,'2026-09-09');assert.ok(text.includes('내 메모'));text=setReading(text,path,'unread');assert.equal(readingState(text,path).completed,'');assert.throws(()=>setReading(text,'../A.md','done'));assert.throws(()=>readingState(text+'\n'+text,path));});
 test('daily checklist keeps today done, carries unfinished, and never deletes history',()=>{const text='- [x] yesterday ➕ 2026-09-07 ✅ 2026-09-08\n- [x] today ➕ 2026-09-08 ✅ 2026-09-09\n- [ ] carry ➕ 2026-09-08\n- [ ] new ➕ 2026-09-09';const t=parseTasks('Tasks/A.md',text);assert.deepEqual(dailyTasks(t,'2026-09-09','2026-09-09').map(x=>x.title),['today','carry','new']);assert.deepEqual(dailyTasks(t,'2026-09-10','2026-09-10').map(x=>x.title),['carry','new']);assert.deepEqual(dailyCounts(t,'2026-09-08','2026-09-09'),{total:3,done:1,carried:2,pending:0});assert.deepEqual(dailyCounts(t,'2026-09-09','2026-09-09'),{total:3,done:1,carried:0,pending:2});assert.equal(dailyCounts(parseTasks('Tasks/A.md','- [ ] no date'),'2026-09-08','2026-09-09').total,0);});
 test('month weeks cover all days exactly once across years and leap months',()=>{for(const [y,m] of [[2026,8],[2026,1],[2028,1],[2026,11]]){const rows=monthWeeks(y,m);const days=[];for(const w of rows){let d=new Date(w.start+'T12:00:00');while(d<=new Date(w.end+'T12:00:00')){days.push(d.getDate());d.setDate(d.getDate()+1);}}assert.deepEqual(days,Array.from({length:new Date(y,m+1,0).getDate()},(_,i)=>i+1));assert.ok(rows.length>=4&&rows.length<=6);}assert.equal(monthWeeks(2026,8)[0].end,'2026-09-06');});
 test('weekly plan insertion preserves prose, rejects missing or duplicate week',()=>{const w=monthWeeks(2026,8)[0];const text=`# Project\n내 메모\n\n## ${w.heading}\n\n## 다음\n보존`;const next=addPlanTask(text,w.heading,'실험 준비','2026-09-09','abc');assert.ok(next.includes('- [ ] 실험 준비 ➕ 2026-09-09 ^task-abc'));assert.ok(next.endsWith('## 다음\n보존'));assert.throws(()=>addPlanTask(text,'missing','x','2026-09-09','abc'));assert.throws(()=>addPlanTask(text+'\n## '+w.heading,w.heading,'x','2026-09-09','abc'));});
@@ -44,20 +44,23 @@ test('celebration requires a saved final completion of today including carried w
 
 
 test('paper index preserves user prose, includes orphan reports and removes old paths',()=>{
- const paths=['Papers/B.md','Papers/A.md','Papers/B.md'];
+ const paths=['Paper reports/B.md','Paper reports/A.md','Paper reports/B.md'];
  const first=data.paperIndexText('',paths);
- assert.equal((first.match(/\[\[Papers\//g)||[]).length,2);
- assert.ok(first.indexOf('Papers/A')<first.indexOf('Papers/B'));
+ assert.equal((first.match(/\[\[Paper reports\//g)||[]).length,2);
+ assert.ok(first.indexOf('Paper reports/A')<first.indexOf('Paper reports/B'));
  assert.equal(data.paperIndexText(first,paths),first);
- const next=data.paperIndexText(first+'\n내 메모\n',['Papers/Renamed.md']);
- assert.ok(next.endsWith('\n내 메모\n'));assert.ok(!next.includes('Papers/A'));
+ const next=data.paperIndexText(first+'\n내 메모\n',['Paper reports/Renamed.md']);
+ assert.ok(next.endsWith('\n내 메모\n'));assert.ok(!next.includes('Paper reports/A'));
  assert.throws(()=>data.paperIndexText('# 내 개인 목록',paths));
  assert.throws(()=>data.paperIndexText('', ['../bad.md']));
- assert.throws(()=>data.paperIndexText('', ['Papers/bad]]name.md']));
+ assert.throws(()=>data.paperIndexText('', ['Paper reports/bad]]name.md']));
 });
 test('graph includes isolated reports and has no legacy 24-node cap',()=>{
- const files=Array.from({length:31},(_,i)=>({path:`Papers/${i}.md`}));
+ const files=Array.from({length:31},(_,i)=>({path:`Paper reports/${i}.md`}));
  assert.equal(data.graphFiles([...files,files[0]]).length,31);
+});
+test('personal file total includes Paper, reports and new folders but excludes analyzer files',()=>{
+ assert.equal(data.personalFileCount(['Paper/a.pdf','Paper reports/a.md','News/story.md','News/images/chart.png','Sources/P1/D001.pdf','Resources/P1/fig.png','.figure-reports/P1/analysis.json','Dashboard/논문 목록.md','README.md']),4);
 });
 
 

@@ -33,9 +33,9 @@ def test_cannot_claim_complete_or_change_batch_without_receipts(setup):
     with pytest.raises(ValueError):m.update(v,s,RID,'running','changed',['b'*32])
 
 def test_receipt_requires_full_job_coverage_and_remote_bytes(tmp_path):
-    v=tmp_path/'v';p=v/'Papers/p.md';p.parent.mkdir(parents=True);p.write_bytes(b'actual report')
+    v=tmp_path/'v';p=v/'Paper reports/p.md';p.parent.mkdir(parents=True);p.write_bytes(b'actual report')
     receipt=tmp_path/'receipt.json';sha=hashlib.sha256(p.read_bytes()).hexdigest()
-    d=dict(version=1,request_id=RID,reports=[dict(job_id=JOB,files=[dict(path='Papers/p.md',sha256=sha)])]);m.atomic(receipt,d)
+    d=dict(version=1,request_id=RID,reports=[dict(job_id=JOB,files=[dict(path='Paper reports/p.md',sha256=sha)])]);m.atomic(receipt,d)
     def git(v,*args):
         if args[:2]==('remote','get-url'):return b'https://github.com/example/research-notes.git'
         if args[0]=='fetch':return b''
@@ -48,14 +48,14 @@ def test_receipt_requires_full_job_coverage_and_remote_bytes(tmp_path):
     with pytest.raises(ValueError,match='Local file changed'):m.verify_receipt(v,RID,receipt,[JOB],git,expected_remote='https://github.com/example/research-notes.git')
 
 def test_receipt_rejects_path_escape(tmp_path):
-    d=dict(version=1,request_id=RID,reports=[dict(job_id=JOB,files=[dict(path='Papers/../../outside.md',sha256='a'*64)])]);p=tmp_path/'r.json';m.atomic(p,d)
+    d=dict(version=1,request_id=RID,reports=[dict(job_id=JOB,files=[dict(path='Paper reports/../../outside.md',sha256='a'*64)])]);p=tmp_path/'r.json';m.atomic(p,d)
     def git(v,*args):
         return b'https://github.com/example/research-notes.git' if args[0]=='remote' else b'abcd refs/heads/main' if args[0]=='ls-remote' else b'abcd'
     with pytest.raises(ValueError,match='Unsafe'):m.verify_receipt(tmp_path,RID,p,[JOB],git,expected_remote='https://github.com/example/research-notes.git')
 
 def test_individual_pdf_request_checks_exact_bytes_and_job(tmp_path):
-    vault=tmp_path/'vault';state=tmp_path/'state';pdf=vault/'PDF/paper.pdf';pdf.parent.mkdir(parents=True);pdf.write_bytes(b'%PDF selected')
-    sha=hashlib.sha256(pdf.read_bytes()).hexdigest();r=dict(version=2,id=RID,action='analyze-pdf',createdAt='2026-09-23T00:00:00Z',path='PDF/paper.pdf',sha256=sha)
+    vault=tmp_path/'vault';state=tmp_path/'state';pdf=vault/'Paper/paper.pdf';pdf.parent.mkdir(parents=True);pdf.write_bytes(b'%PDF selected')
+    sha=hashlib.sha256(pdf.read_bytes()).hexdigest();r=dict(version=2,id=RID,action='analyze-pdf',createdAt='2026-09-23T00:00:00Z',path='Paper/paper.pdf',sha256=sha)
     m.atomic(vault/'.paper-control/requests'/f'{RID}.json',r)
     assert m.request(vault,RID)==r
     db=state/'state/jobs.sqlite3';db.parent.mkdir(parents=True)

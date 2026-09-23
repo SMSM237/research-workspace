@@ -40,16 +40,16 @@ def build_report(data: dict[str,Any], asset_root: Path, output_dir: Path, *, art
     title=data['paper'].get('library_title',rid)
     if not title or len(title)>160 or re.search(r'[\\/:*?"<>|#%\x00-\x1f]',title) or title.endswith(('.', ' ')) or title in {'.','..'}:
         raise ValueError('Unsafe library filename')
-    markdown_path=f'Papers/{title}.md'; state_path=f'.figure-reports/{rid}/manifest.json'
+    markdown_path=f'Paper reports/{title}.md'; state_path=f'.figure-reports/{rid}/manifest.json'
     state=_under(root,state_path)
     old=json.loads(state.read_text(encoding='utf-8')) if state.exists() else {'files':{}}
     if not isinstance(old,dict) or not isinstance(old.get('files'),dict):
         raise ValueError('Invalid managed output manifest; refusing to overwrite')
     if old.get('markdown_path'):
         previous_path=old['markdown_path']
-        if not isinstance(previous_path,str) or not re.fullmatch(r'Papers/[^/\\]+\.md',previous_path) or any(c in previous_path for c in ':?#%'):
+        if not isinstance(previous_path,str) or not re.fullmatch(r'(?:Papers|Paper reports)/[^/\\]+\.md',previous_path) or any(c in previous_path for c in ':?#%'):
             raise ValueError('Invalid managed Markdown path')
-        markdown_path=previous_path
+        markdown_path=previous_path.replace('Papers/','Paper reports/',1)
     payload={markdown_path:render_markdown(data).encode('utf-8'),
              f'.figure-reports/{rid}/analysis.json':json.dumps(data,ensure_ascii=False,indent=2).encode('utf-8')}
     # Raw model output/provenance travel with the report under the same edit guard.

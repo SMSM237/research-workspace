@@ -38,4 +38,4 @@ def test_inbox_detects_multiple_pdfs_while_ai_is_held(tmp_path):
     first=worker.queue.list();assert len(first)==2
     worker.tick();assert len(worker.queue.list())==2
     assert all(j['state']!='complete' for j in first)
-    assert not list((vault/'Papers').glob('*.md')) if (vault/'Papers').exists() else True
+    assert not list((vault/'Paper reports').glob('*.md')) if (vault/'Paper reports').exists() else True

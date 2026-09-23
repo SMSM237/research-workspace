@@ -75,7 +75,7 @@ export function readingState(text:string,path:string):{state:ReadingState;comple
   const m=rows[0]?.match(/^- \[([ x-])\]/);return {state:m?.[1]==='x'?'done':m?.[1]==='-'?'reading':'unread',completed:rows[0]?.match(/✅ (\d{4}-\d{2}-\d{2})/)?.[1]||''};
 }
 export function setReading(text:string,path:string,state:ReadingState,day=localDay()):string{
-  if(!/^Papers\/[^\r\n|#]+\.md$/.test(path)||path.includes('[[')||path.includes(']]')||path.split('/').some(p=>p==='..'||p==='.')||!['unread','reading','done'].includes(state)||!validDay(day))throw Error('논문 기록을 확인해 주세요.');
+ if(!/^Paper reports\/[^\r\n|#]+\.md$/.test(path)||path.includes('[[')||path.includes(']]')||path.split('/').some(p=>p==='..'||p==='.')||!['unread','reading','done'].includes(state)||!validDay(day))throw Error('논문 기록을 확인해 주세요.');
   readingState(text,path);const lines=text.split(/\r?\n/);const i=lines.findIndex(x=>x.includes(`[[${path}]]`));
   const next=`- [${state==='done'?'x':state==='reading'?'-':' '}] [[${path}]]${state==='done'?` ✅ ${day}`:''}`;
   if(i<0)lines.push(next);else lines[i]=next;return lines.join(text.includes('\r\n')?'\r\n':'\n');
@@ -93,12 +93,17 @@ export function graphFiles<T extends {path:string}>(files:T[]):T[]{return [...ne
 export function paperIndexText(existing:string,paths:string[]):string{
  const start='<!-- research-paper-index:start -->',end='<!-- research-paper-index:end -->';
  const sorted=[...new Set(paths)].sort((a,b)=>a.localeCompare(b,'ko'));
- for(const path of sorted)if(!path.startsWith('Papers/')||!path.endsWith('.md')||path.split('/').includes('..')||/[\\\r\n|#]/.test(path)||path.includes(']]'))throw Error('논문 경로를 확인해 주세요.');
+ for(const path of sorted)if(!path.startsWith('Paper reports/')||!path.endsWith('.md')||path.split('/').includes('..')||/[\\\r\n|#]/.test(path)||path.includes(']]'))throw Error('논문 경로를 확인해 주세요.');
  const block=start+'\n'+sorted.map(p=>'- [['+p.slice(0,-3)+']]').join('\n')+'\n'+end;
  if(!existing)return '# 논문 목록\n\n분석된 논문을 모은 탐색용 목록입니다. 선은 문서 링크를 나타냅니다.\n\n'+block+'\n';
  const a=existing.indexOf(start),b=existing.indexOf(end);
  if(a<0||b<a||existing.indexOf(start,a+1)>=0||existing.indexOf(end,b+1)>=0)throw Error('기존 논문 목록의 자동 갱신 영역을 확인해 주세요.');
  return existing.slice(0,a)+block+existing.slice(b+end.length);
+}
+
+const INTERNAL_ROOTS=new Set(['Dashboard','Inbox','Meetings','Notes','Papers','PDF','Projects','Resources','Sources','Tasks','Templates','Daily']);
+export function personalFileCount(paths:string[]):number{
+ return paths.filter(path=>{const parts=path.split('/');return parts.length>1&&!parts[0].startsWith('.')&&!INTERNAL_ROOTS.has(parts[0]);}).length;
 }
 
 export function planWeekStep(year:number,month:number,start:string,delta:-1|1){

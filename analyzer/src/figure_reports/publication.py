@@ -229,7 +229,7 @@ def publish_checked(worker,job,packet,present,analysis,*,artifacts=None,visual_b
     staging=analysis/'publication';data=make_report(packet,present,job['bundle'],staging,visual_bundle=visual_bundle)
     if artifacts and 'chat-analysis.md' in artifacts:data['text_format']='markdown'
     validate_report(data,staging)
-    candidate=w.vault/'Papers'/(data['paper']['library_title']+'.md')
+    candidate=w.vault/'Paper reports'/(data['paper']['library_title']+'.md')
     own_manifest=w.vault/'.figure-reports'/job['report_id']/'manifest.json'
     if candidate.exists() and not own_manifest.exists():
         data['paper']['library_title']+=' · '+job['report_id'][-6:]
@@ -245,7 +245,7 @@ def publish_checked(worker,job,packet,present,analysis,*,artifacts=None,visual_b
         if digest(target)!=doc['sha256']:raise ValueError('원본 게시 해시 불일치')
     result=build_report(data,staging,w.vault,artifacts=artifacts)
     link_file=w.vault/'Dashboard/pdf-links.json'
-    library=w.vault/'PDF'
+    library=w.vault/'Paper'
     matched=[]
     if library.exists():
         for pdf in library.rglob('*.pdf'):

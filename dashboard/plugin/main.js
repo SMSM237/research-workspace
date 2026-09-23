@@ -117,7 +117,7 @@ class PaperGraph3D {
                 if (!this.reducedMotion.matches) {
                     if (now >= this.nextTurn) {
                         this.direction += (Math.random() < .5 ? -1 : 1) * (1.1 + Math.random() * (Math.PI * 2 - 2.2));
-                        const speed = .0012 + Math.random() * .0006;
+                        const speed = .0006 + Math.random() * .0003;
                         this.targetYaw = Math.cos(this.direction) * speed;
                         this.targetPitch = Math.sin(this.direction) * speed;
                         this.nextTurn = now + 7000 + Math.random() * 5000;
@@ -199,8 +199,8 @@ class PaperGraph3D {
         this.canvas.addEventListener('contextmenu', this.contextMenu);
         this.canvas.addEventListener('keydown', this.key);
         this.direction = Math.random() * Math.PI * 2;
-        this.velocityYaw = this.targetYaw = Math.cos(this.direction) * .0015;
-        this.velocityPitch = this.targetPitch = Math.sin(this.direction) * .0015;
+        this.velocityYaw = this.targetYaw = Math.cos(this.direction) * .00075;
+        this.velocityPitch = this.targetPitch = Math.sin(this.direction) * .00075;
         this.nextTurn = performance.now() + 7500;
         this.observer = new ResizeObserver(() => this.draw());
         this.observer.observe(host);
@@ -501,6 +501,7 @@ exports.setReading = setReading;
 exports.completedToday = completedToday;
 exports.graphFiles = graphFiles;
 exports.paperIndexText = paperIndexText;
+exports.personalFileCount = personalFileCount;
 exports.planWeekStep = planWeekStep;
 exports.READING = 'Notes/독서 기록.md';
 function localDay(date = new Date()) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; }
@@ -649,7 +650,7 @@ function readingState(text, path) {
     return { state: m?.[1] === 'x' ? 'done' : m?.[1] === '-' ? 'reading' : 'unread', completed: rows[0]?.match(/✅ (\d{4}-\d{2}-\d{2})/)?.[1] || '' };
 }
 function setReading(text, path, state, day = localDay()) {
-    if (!/^Papers\/[^\r\n|#]+\.md$/.test(path) || path.includes('[[') || path.includes(']]') || path.split('/').some(p => p === '..' || p === '.') || !['unread', 'reading', 'done'].includes(state) || !validDay(day))
+    if (!/^Paper reports\/[^\r\n|#]+\.md$/.test(path) || path.includes('[[') || path.includes(']]') || path.split('/').some(p => p === '..' || p === '.') || !['unread', 'reading', 'done'].includes(state) || !validDay(day))
         throw Error('논문 기록을 확인해 주세요.');
     readingState(text, path);
     const lines = text.split(/\r?\n/);
@@ -673,7 +674,7 @@ function paperIndexText(existing, paths) {
     const start = '<!-- research-paper-index:start -->', end = '<!-- research-paper-index:end -->';
     const sorted = [...new Set(paths)].sort((a, b) => a.localeCompare(b, 'ko'));
     for (const path of sorted)
-        if (!path.startsWith('Papers/') || !path.endsWith('.md') || path.split('/').includes('..') || /[\\\r\n|#]/.test(path) || path.includes(']]'))
+        if (!path.startsWith('Paper reports/') || !path.endsWith('.md') || path.split('/').includes('..') || /[\\\r\n|#]/.test(path) || path.includes(']]'))
             throw Error('논문 경로를 확인해 주세요.');
     const block = start + '\n' + sorted.map(p => '- [[' + p.slice(0, -3) + ']]').join('\n') + '\n' + end;
     if (!existing)
@@ -682,6 +683,10 @@ function paperIndexText(existing, paths) {
     if (a < 0 || b < a || existing.indexOf(start, a + 1) >= 0 || existing.indexOf(end, b + 1) >= 0)
         throw Error('기존 논문 목록의 자동 갱신 영역을 확인해 주세요.');
     return existing.slice(0, a) + block + existing.slice(b + end.length);
+}
+const INTERNAL_ROOTS = new Set(['Dashboard', 'Inbox', 'Meetings', 'Notes', 'Papers', 'PDF', 'Projects', 'Resources', 'Sources', 'Tasks', 'Templates', 'Daily']);
+function personalFileCount(paths) {
+    return paths.filter(path => { const parts = path.split('/'); return parts.length > 1 && !parts[0].startsWith('.') && !INTERNAL_ROOTS.has(parts[0]); }).length;
 }
 function planWeekStep(year, month, start, delta) {
     const weeks = monthWeeks(year, month), i = weeks.findIndex(w => w.start === start), next = i + delta;
@@ -1437,12 +1442,12 @@ class ResearchDashboard {
     }
     snapshot() {
         if (!this.cache)
-            this.cache = (async () => { const files = this.app.vault.getMarkdownFiles(); const papers = files.filter(f => f.path.startsWith('Papers/') && this.app.metadataCache.getFileCache(f)?.frontmatter?.report_id); const paperIndex = await this.syncPaperIndex(papers); const sources = files.filter(f => (0, dashboard_data_3.taskSource)(f.path)); const contents = await Promise.all(sources.map(async (f) => [f.path, await this.app.vault.cachedRead(f)])); const reading = this.app.vault.getAbstractFileByPath(dashboard_data_3.READING); let pdfLinks = {}; try {
+            this.cache = (async () => { const files = this.app.vault.getMarkdownFiles(); const papers = files.filter(f => f.path.startsWith('Paper reports/') && this.app.metadataCache.getFileCache(f)?.frontmatter?.report_id); const paperIndex = await this.syncPaperIndex(papers); const sources = files.filter(f => (0, dashboard_data_3.taskSource)(f.path)); const contents = await Promise.all(sources.map(async (f) => [f.path, await this.app.vault.cachedRead(f)])); const reading = this.app.vault.getAbstractFileByPath(dashboard_data_3.READING); let pdfLinks = {}; try {
                 const text = await this.app.vault.adapter.read('Dashboard/pdf-links.json'), data = JSON.parse(text);
                 if (data.version === 1 && data.links && typeof data.links === 'object' && !Array.isArray(data.links))
                     pdfLinks = data.links;
             }
-            catch { } return { tasks: contents.flatMap(([p, t]) => (0, dashboard_data_3.parseTasks)(p, t)), projects: files.filter(f => f.path.startsWith('Projects/') && !f.path.startsWith('Projects/Plans/') && this.app.metadataCache.getFileCache(f)?.frontmatter?.dashboard_example !== true).sort((a, b) => a.basename.localeCompare(b.basename, 'ko')), schedules: files.filter(f => f.path.startsWith('Meetings/Schedule/')), meetings: files.filter(f => f.path.startsWith('Meetings/') && !f.path.startsWith('Meetings/Schedule/')).sort((a, b) => b.basename.localeCompare(a.basename, 'ko')), papers, pdfs: this.app.vault.getFiles().filter(f => f.extension.toLowerCase() === 'pdf' && (f.path.startsWith('PDF/') || f.path.startsWith('Sources/'))), pdfLinks, paperIndex, profiles: await this.profiles(papers), reading: reading instanceof obsidian_1.TFile ? await this.app.vault.cachedRead(reading) : '' }; })();
+            catch { } return { tasks: contents.flatMap(([p, t]) => (0, dashboard_data_3.parseTasks)(p, t)), projects: files.filter(f => f.path.startsWith('Projects/') && !f.path.startsWith('Projects/Plans/') && this.app.metadataCache.getFileCache(f)?.frontmatter?.dashboard_example !== true).sort((a, b) => a.basename.localeCompare(b.basename, 'ko')), schedules: files.filter(f => f.path.startsWith('Meetings/Schedule/')), meetings: files.filter(f => f.path.startsWith('Meetings/') && !f.path.startsWith('Meetings/Schedule/')).sort((a, b) => b.basename.localeCompare(a.basename, 'ko')), papers, pdfs: this.app.vault.getFiles().filter(f => f.extension.toLowerCase() === 'pdf' && f.path.startsWith('Paper/')), pdfLinks, paperIndex, profiles: await this.profiles(papers), reading: reading instanceof obsidian_1.TFile ? await this.app.vault.cachedRead(reading) : '' }; })();
         return this.cache;
     }
     async ensureFolder(path) { let parent = ''; for (const part of path.split('/')) {
@@ -1558,6 +1563,8 @@ class ModuleView extends obsidian_1.MarkdownRenderChild {
         }
         else
             heading.textContent = meta[0];
+        if (['queue', 'papers', 'meetings'].includes(this.kind))
+            heading.createSpan({ cls: 'rd-card-count', text: '0' });
         if (!['papers', 'queue', 'graph'].includes(this.kind))
             root.createEl('p', { text: meta[1], cls: 'rd-subtitle' });
         else if (this.kind === 'queue')
@@ -1579,16 +1586,12 @@ class ModuleView extends obsidian_1.MarkdownRenderChild {
         if (this.kind === 'projects') {
             const add = h.createEl('button', { text: '+', cls: 'rd-new-project-button', attr: { type: 'button', 'aria-label': '연구 프로젝트 추가', title: '연구 프로젝트 추가', 'aria-haspopup': 'dialog' } });
             add.onclick = () => new record_dialogs_1.MeetingCreateModal(this.dashboard.app, async (title) => { this.projectPath = await this.dashboard.newNote('Projects', title); this.saveView(); this.dashboard.refresh(); }, 'project').open();
+            this.setupCollapse(h, root, 'projects', !!saved.projectsCollapsed);
         }
         if (this.kind === 'meetings') {
             const add = h.createEl('button', { text: '새 회의록', cls: 'rd-new-meeting', attr: { type: 'button', 'aria-haspopup': 'dialog' } });
             add.onclick = () => new record_dialogs_1.MeetingCreateModal(this.dashboard.app, async (title) => { await this.dashboard.newNote('Meetings', title); this.dashboard.refresh(); }).open();
-            const toggle = h.createEl('button', { cls: 'rd-meeting-toggle', attr: { type: 'button', 'aria-label': '회의록 접기', 'aria-expanded': 'true', title: '회의록 접기' } });
-            (0, obsidian_1.setIcon)(toggle, 'chevron-up');
-            const collapsed = !!saved.meetingsCollapsed;
-            const apply = (value) => { root.classList.toggle('is-collapsed', value); root.closest('.rd-desktop-right')?.classList.toggle('is-meetings-collapsed', value); root.closest('.rd-desktop-grid')?.classList.toggle('is-meetings-collapsed', value); toggle.setAttribute('aria-expanded', String(!value)); toggle.setAttribute('aria-label', value ? '회의록 펼치기' : '회의록 접기'); toggle.title = value ? '회의록 펼치기' : '회의록 접기'; (0, obsidian_1.setIcon)(toggle, value ? 'chevron-down' : 'chevron-up'); };
-            apply(collapsed);
-            toggle.onclick = () => { const next = !root.classList.contains('is-collapsed'); apply(next); const current = this.dashboard.app.loadLocalStorage('research-dashboard-view') || {}; this.dashboard.app.saveLocalStorage('research-dashboard-view', { ...current, meetingsCollapsed: next }); };
+            this.setupCollapse(h, root, 'meetings', !!saved.meetingsCollapsed);
         }
         this.register(this.dashboard.subscribe(() => void this.render()));
         void this.render();
@@ -1596,6 +1599,13 @@ class ModuleView extends obsidian_1.MarkdownRenderChild {
             this.registerInterval(window.setInterval(() => void this.renderWorker(), 5000));
     }
     onunload() { this.alive = false; this.ticket++; this.projectResize?.disconnect(); this.graph3d?.destroy(); }
+    setupCollapse(heading, root, kind, collapsed) {
+        const label = kind === 'projects' ? '프로젝트' : '회의록', key = kind === 'projects' ? 'projectsCollapsed' : 'meetingsCollapsed';
+        const toggle = heading.createEl('button', { cls: 'rd-meeting-toggle', attr: { type: 'button', 'aria-label': label + ' 접기', 'aria-expanded': 'true', title: label + ' 접기' } });
+        const apply = (value) => { root.classList.toggle('is-collapsed', value); root.closest('.rd-desktop-right')?.classList.toggle(`is-${kind}-collapsed`, value); root.closest('.rd-desktop-grid')?.classList.toggle(`is-${kind}-collapsed`, value); toggle.setAttribute('aria-expanded', String(!value)); toggle.setAttribute('aria-label', label + (value ? ' 펼치기' : ' 접기')); toggle.title = label + (value ? ' 펼치기' : ' 접기'); (0, obsidian_1.setIcon)(toggle, value ? 'chevron-down' : 'chevron-up'); };
+        apply(collapsed);
+        toggle.onclick = () => { const next = !root.classList.contains('is-collapsed'); apply(next); const current = this.dashboard.app.loadLocalStorage('research-dashboard-view') || {}; this.dashboard.app.saveLocalStorage('research-dashboard-view', { ...current, [key]: next }); };
+    }
     saveView() { const previous = this.dashboard.app.loadLocalStorage('research-dashboard-view') || {}; this.dashboard.app.saveLocalStorage('research-dashboard-view', { ...previous, project: this.projectPath }); }
     async act(fn) { try {
         this.error.hidden = true;
@@ -1635,6 +1645,9 @@ class ModuleView extends obsidian_1.MarkdownRenderChild {
             const s = await this.dashboard.snapshot();
             if (!this.alive || ticket !== this.ticket)
                 return;
+            const count = this.containerEl.querySelector('.rd-card-count');
+            if (count)
+                count.textContent = String(this.kind === 'queue' ? s.pdfs.filter(f => !s.pdfLinks[f.path]).length : this.kind === 'papers' ? s.papers.length : s.meetings.length);
             const previousScroll = this.body.scrollTop;
             this.graph3d?.destroy();
             this.graph3d = null;
@@ -1760,10 +1773,10 @@ class ModuleView extends obsidian_1.MarkdownRenderChild {
                 this.button(this.body, '그래프 펼치기', async () => { await this.dashboard.app.workspace.getLeaf('split').setViewState({ type: 'graph', active: true }); }, 'network');
             }
             else if (this.kind === 'queue') {
-                const pdfs = s.pdfs.filter(f => f.path.startsWith('PDF/') && !s.pdfLinks[f.path]).sort((a, b) => a.basename.localeCompare(b.basename, 'ko'));
+                const pdfs = s.pdfs.filter(f => !s.pdfLinks[f.path]).sort((a, b) => a.basename.localeCompare(b.basename, 'ko'));
                 const requests = await this.dashboard.pdfRequests();
                 if (!pdfs.length)
-                    this.empty('대기 중인 원본 PDF가 없습니다. PDF 폴더에 넣으면 여기에 나타납니다.');
+                    this.empty('대기 중인 원본 PDF가 없습니다. Paper 폴더에 넣으면 여기에 나타납니다.');
                 for (const pdf of pdfs) {
                     const row = this.body.createDiv({ cls: 'rd-paper-row rd-pdf-row' });
                     this.link(row, pdf, pdf.basename);
@@ -1855,21 +1868,17 @@ class ModuleView extends obsidian_1.MarkdownRenderChild {
         const model = (0, paper_relations_1.paperRelations)(s.profiles, this.dashboard.app.metadataCache.resolvedLinks), items = [], links = [];
         for (const paper of model.nodes)
             items.push({ id: 'report:' + paper.path, path: paper.path, label: paper.title, group: model.groups.get(paper.path) || '미분류', kind: 'report' });
-        const reportById = new Map(s.papers.map(f => [String(this.dashboard.app.metadataCache.getFileCache(f)?.frontmatter?.report_id || ''), f.path]));
-        const linkedReports = new Set(Object.values(s.pdfLinks));
         for (const file of s.pdfs) {
-            if (file.path.startsWith('Sources/') && file.basename === 'D001' && linkedReports.has(reportById.get(file.path.split('/')[1]) || ''))
-                continue;
-            const report = s.pdfLinks[file.path] || (file.path.startsWith('Sources/') ? reportById.get(file.path.split('/')[1]) : undefined);
+            const report = s.pdfLinks[file.path];
             const group = report ? model.groups.get(report) || '미분류' : '보관 PDF';
-            items.push({ id: 'pdf:' + file.path, path: file.path, label: file.path.startsWith('Sources/') ? `${model.nodes.find(p => p.path === report)?.title || file.path.split('/')[1]} · 원본 PDF` : file.basename, group, kind: 'pdf' });
+            items.push({ id: 'pdf:' + file.path, path: file.path, label: file.basename, group, kind: 'pdf' });
             if (report && model.nodes.some(p => p.path === report))
                 links.push({ from: 'pdf:' + file.path, to: 'report:' + report, kind: 'source' });
         }
         for (const edge of model.edges)
             links.push({ from: 'report:' + edge.from, to: 'report:' + edge.to, kind: 'related' });
         if (!items.length) {
-            target.createEl('p', { cls: 'rd-empty', text: 'PDF 폴더에 파일을 넣으면 그래프에 나타납니다.' });
+            target.createEl('p', { cls: 'rd-empty', text: 'Paper 폴더에 파일을 넣으면 그래프에 나타납니다.' });
             return;
         }
         const head = this.containerEl.querySelector('.rd-module-heading');
@@ -1932,6 +1941,8 @@ class ModuleView extends obsidian_1.MarkdownRenderChild {
                     cell.style.visibility = 'hidden';
             }
             right.createEl('p', { cls: 'rd-small', text: keys.length ? `${keys[0]}부터 관찰 · 같은 날 같은 노트는 한 번만 셉니다.` : '측정을 시작했습니다. 할 일·계획·회의록·메모의 실제 변경부터 기록합니다.' });
+            const fileCount = (0, dashboard_data_1.personalFileCount)(this.dashboard.app.vault.getFiles().map(file => file.path));
+            right.createEl('p', { cls: 'rd-personal-file-count', text: `보관 파일 ${fileCount}개`, attr: { title: 'Paper · Paper reports · 새로 만든 폴더의 파일 합계. 분석 내부 자료는 제외합니다.' } });
         }
         catch (error) {
             if (this.alive) {
@@ -2000,8 +2011,8 @@ class DesktopDashboard extends obsidian_1.ItemView {
     getViewType() { return DESKTOP; }
     getDisplayText() { return '대시보드'; }
     getIcon() { return 'house'; }
-    async onOpen() { this.contentEl.empty(); this.contentEl.classList.add('rd-desktop'); const grid = this.contentEl.createDiv({ cls: 'rd-desktop-grid' }); for (const kind of ['home', 'graph', 'tasks', 'weekly', 'projects', 'queue', 'calendar', 'schedules', 'meetings', 'papers']) {
-        let parent = grid;
+    async onOpen() { this.contentEl.empty(); this.contentEl.classList.add('rd-desktop'); const grid = this.contentEl.createDiv({ cls: 'rd-desktop-grid' }), top = grid.createDiv({ cls: 'rd-desktop-top' }); for (const kind of ['home', 'graph', 'tasks', 'weekly', 'projects', 'queue', 'calendar', 'schedules', 'meetings', 'papers']) {
+        let parent = ['home', 'graph'].includes(kind) ? top : grid;
         if (['schedules', 'meetings', 'papers'].includes(kind))
             parent = grid.querySelector('.rd-desktop-right') || grid.createDiv({ cls: 'rd-desktop-right' });
         const card = parent.createDiv({ cls: 'rd-desktop-card', attr: { 'data-card': kind } });
@@ -2091,19 +2102,17 @@ class PaperLibrary extends obsidian_1.ItemView {
         list.empty();
         const match = (s) => s.toLocaleLowerCase().includes(this.query.toLocaleLowerCase());
         const control = this.plugin.remoteControl;
-        const pdfs = this.app.vault.getFiles().filter(f => f.extension.toLowerCase() === 'pdf' && (f.path.startsWith('PDF/') || f.path.startsWith('Sources/')) && match(f.basename)).sort((a, b) => a.basename.localeCompare(b.basename, 'ko'));
-        const papers = this.app.vault.getMarkdownFiles().filter(f => f.path.startsWith('Papers/') && this.app.metadataCache.getFileCache(f)?.frontmatter?.report_id).sort((a, b) => a.basename.localeCompare(b.basename, 'ko'));
+        const pdfs = this.app.vault.getFiles().filter(f => f.extension.toLowerCase() === 'pdf' && f.path.startsWith('Paper/') && match(f.basename)).sort((a, b) => a.basename.localeCompare(b.basename, 'ko'));
+        const papers = this.app.vault.getMarkdownFiles().filter(f => f.path.startsWith('Paper reports/') && this.app.metadataCache.getFileCache(f)?.frontmatter?.report_id).sort((a, b) => a.basename.localeCompare(b.basename, 'ko'));
         if (pdfs.length)
             list.createEl('h3', { text: '원본 PDF', cls: 'rr-library-section' });
         for (const file of pdfs) {
             const row = list.createDiv({ cls: 'rr-library-pdf-row' });
-            const open = row.createEl('button', { cls: 'rr-library-paper', text: file.path.startsWith('Sources/') ? `${file.path.split('/')[1]} · 원본 PDF` : file.basename, attr: { type: 'button', 'aria-label': file.basename + ' 원본 PDF 열기' } });
+            const open = row.createEl('button', { cls: 'rr-library-paper', text: file.basename, attr: { type: 'button', 'aria-label': file.basename + ' 원본 PDF 열기' } });
             open.onclick = async () => { await this.app.workspace.getLeaf(false).openFile(file); if (obsidian_1.Platform.isMobile)
                 this.app.workspace.leftSplit.collapse(); };
-            if (file.path.startsWith('PDF/')) {
-                const analyze = row.createEl('button', { cls: 'rr-library-analyze', text: '분석', attr: { type: 'button', 'aria-label': file.basename + ' 분석 시작' } });
-                analyze.onclick = () => { analyze.disabled = true; void control.submitPdf(file).catch(() => { }).finally(() => { analyze.disabled = false; this.renderList(); }); };
-            }
+            const analyze = row.createEl('button', { cls: 'rr-library-analyze', text: '분석', attr: { type: 'button', 'aria-label': file.basename + ' 분석 시작' } });
+            analyze.onclick = () => { analyze.disabled = true; void control.submitPdf(file).catch(() => { }).finally(() => { analyze.disabled = false; this.renderList(); }); };
         }
         let count = 0;
         for (const file of papers) {
@@ -2120,7 +2129,7 @@ class PaperLibrary extends obsidian_1.ItemView {
                 this.app.workspace.leftSplit.collapse(); };
         }
         if (!count && !pdfs.length)
-            list.createEl('p', { text: this.query ? '검색 결과가 없습니다.' : 'PDF 폴더에 파일을 넣으면 여기에 표시됩니다.', cls: 'rr-empty' });
+            list.createEl('p', { text: this.query ? '검색 결과가 없습니다.' : 'Paper 폴더에 파일을 넣으면 여기에 표시됩니다.', cls: 'rr-empty' });
         void control?.requests().then((requests) => { for (const row of Array.from(list.querySelectorAll('.rr-library-pdf-row'))) {
             const file = pdfs[Array.from(list.querySelectorAll('.rr-library-pdf-row')).indexOf(row)];
             const request = requests.find(x => x.request.version === 2 && x.request.path === file.path);
@@ -2167,7 +2176,7 @@ class WorkerJobs extends obsidian_1.Modal {
                 list.setText('접수된 작업이 없습니다.');
             const labels = { queued: '대기 중', running: '진행 중', prepared: '자료 준비 완료', failed: '오류', interrupted: '중단됨', waiting: '대기', review: '분석 결과 검토 대기', complete: '분석 완료' };
             for (const job of data.jobs.slice().reverse()) {
-                const paper = this.app.vault.getMarkdownFiles().find(f => f.path.startsWith('Papers/') && this.app.metadataCache.getFileCache(f)?.frontmatter?.report_id === job.report_id);
+                const paper = this.app.vault.getMarkdownFiles().find(f => f.path.startsWith('Paper reports/') && this.app.metadataCache.getFileCache(f)?.frontmatter?.report_id === job.report_id);
                 const title = paper ? String(this.app.metadataCache.getFileCache(paper)?.frontmatter?.library_title || paper.basename) : (typeof job.source_name === 'string' && job.source_name ? job.source_name : job.report_id);
                 const row = list.createDiv({ cls: 'rr-job' });
                 row.createEl('h3', { text: title });
@@ -2485,7 +2494,7 @@ exports.CONTROL = '.paper-control';
 exports.UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 exports.TERMINAL = new Set(['complete', 'verified', 'empty', 'cancelled']);
 exports.STATES = { pending: 'PC 접수 대기', dispatching: '실행 요청 전달 중', queued: 'Codex 실행 대기', running: 'Chat 분석 중', review: 'Work 검증 중', publishing: 'Git 게시 확인 중', waiting: '확인 대기', blocked: '조치 필요', complete: 'Git 게시 완료', verified: '연결 확인 완료', empty: '새 논문 없음', cancelled: '요청 취소' };
-exports.PDF_PATH = /^PDF\/(?!.*(?:^|\/)\.\.?\/)[^\\\r\n:|#<>"?*]+\.pdf$/i;
+exports.PDF_PATH = /^(?:Paper|PDF)\/(?!.*(?:^|\/)\.\.?\/)[^\\\r\n:|#<>"?*]+\.pdf$/i;
 function parseRequest(text, filename) {
     if (text.length > 2048)
         throw Error('실행 요청이 너무 큽니다.');
@@ -2705,10 +2714,21 @@ class PaperRemoteControl {
     async submitPdf(file) {
         if (this.submitBusy)
             return;
-        if (!remote_data_1.PDF_PATH.test(file.path) || file.path.split('/').some(p => p === '.' || p === '..'))
-            throw Error('PDF 폴더의 파일만 분석 요청할 수 있습니다.');
+        if (!file.path.startsWith('Paper/') || !remote_data_1.PDF_PATH.test(file.path) || file.path.split('/').some(p => p === '.' || p === '..'))
+            throw Error('Paper 폴더의 파일만 분석 요청할 수 있습니다.');
         if (file.stat.size > 95 * 1024 * 1024)
             throw Error('95MB를 넘는 PDF는 Git 동기화 전에 크기를 확인해 주세요.');
+        const linksFile = 'Dashboard/pdf-links.json', adapter = this.plugin.app.vault.adapter;
+        if (await adapter.exists(linksFile)) {
+            const links = JSON.parse(await adapter.read(linksFile));
+            if (links?.version !== 1 || !links.links || typeof links.links !== 'object' || Array.isArray(links.links))
+                throw Error('논문 연결 목록 형식을 확인해 주세요.');
+            const report = links.links[file.path];
+            if (typeof report === 'string' && this.plugin.app.vault.getAbstractFileByPath(report) instanceof obsidian_1.TFile) {
+                new obsidian_1.Notice('이미 분석된 PDF입니다. 완성 리포트에서 확인해 주세요.');
+                return;
+            }
+        }
         this.submitBusy = true;
         try {
             const digest = await crypto.subtle.digest('SHA-256', await this.plugin.app.vault.readBinary(file));
@@ -2886,7 +2906,7 @@ class ControlView extends obsidian_1.ItemView {
         }
         const info = body.createEl('details');
         info.createEl('summary', { text: '실행 조건과 파일 위치' });
-        info.createEl('p', { text: 'Windows PC와 Obsidian·Codex가 실행 중이어야 합니다. PDF 폴더는 Git 동기화 대상이며, PC에 원본 PDF와 요청이 모두 도착해야 분석이 시작됩니다.' });
+        info.createEl('p', { text: 'Windows PC와 Obsidian·Codex가 실행 중이어야 합니다. Paper 폴더는 Git 동기화 대상이며, PC에 원본 PDF와 요청이 모두 도착해야 분석이 시작됩니다.' });
         info.createEl('p', { text: '요청 저장은 분석 시작과 다릅니다. PC 접수와 Codex 실행 상태가 도착하면 표시가 바뀝니다. 다운로드·로그인 문제는 조치 필요 상태로 남습니다.' });
     }
 }

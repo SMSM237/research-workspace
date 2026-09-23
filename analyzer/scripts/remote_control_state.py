@@ -8,7 +8,7 @@ import argparse, hashlib, json, os, re, sqlite3, subprocess
 from datetime import datetime, timezone
 
 UUID = re.compile(r'^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$')
-PDF_PATH = re.compile(r'^PDF/(?:[^/\\:\r\n<>"|?*#]+/)*[^/\\:\r\n<>"|?*#]+\.pdf$',re.I)
+PDF_PATH = re.compile(r'^(?:Paper|PDF)/(?:[^/\\:\r\n<>"|?*#]+/)*[^/\\:\r\n<>"|?*#]+\.pdf$',re.I)
 
 def read(path):
     return json.loads(Path(path).read_text(encoding='utf-8-sig'))
@@ -31,7 +31,7 @@ def request(vault, rid):
         rel=r.get('path');sha=r.get('sha256')
         if set(r)!={'version','id','action','createdAt','path','sha256'} or r['action']!='analyze-pdf' or not isinstance(rel,str) or not PDF_PATH.fullmatch(rel) or any(x in {'.','..',''} for x in rel.split('/')) or not isinstance(sha,str) or not re.fullmatch('[a-f0-9]{64}',sha):raise ValueError('Invalid PDF request')
         root=Path(vault).resolve();p=(root/rel).resolve()
-        if not p.is_relative_to(root) or not p.is_relative_to((root/'PDF').resolve()) or not p.is_file() or hashlib.sha256(p.read_bytes()).hexdigest()!=sha:raise ValueError('Selected PDF is missing or changed')
+        if not p.is_relative_to(root) or not p.is_relative_to((root/rel.split('/')[0]).resolve()) or not p.is_file() or hashlib.sha256(p.read_bytes()).hexdigest()!=sha:raise ValueError('Selected PDF is missing or changed')
     else:raise ValueError('Invalid request version')
     return r
 
@@ -60,7 +60,7 @@ def verify_receipt(vault,rid,receipt,selected,run_git=git,expected_remote=None):
     checked=0
     for report in reports:
         files=report.get('files',[])
-        if not files or not any(str(f.get('path','')).startswith('Papers/') and str(f.get('path','')).endswith('.md') for f in files):raise ValueError('Missing paper report')
+        if not files or not any(str(f.get('path','')).startswith('Paper reports/') and str(f.get('path','')).endswith('.md') for f in files):raise ValueError('Missing paper report')
         for f in files:
             rel=f.get('path','');sha=f.get('sha256','');pp=PurePosixPath(rel)
             if not rel or '\\' in rel or ':' in rel or pp.is_absolute() or '..' in pp.parts or not re.fullmatch('[a-f0-9]{64}',sha):raise ValueError('Unsafe receipt path or hash')

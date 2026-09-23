@@ -4,7 +4,7 @@ export type RunRequest = {version:1;id:string;action:'analyze-inbox'|'diagnostic
 export interface RunStatus {version:1;id:string;state:string;message:string;updatedAt:string;queueMessageId?:string;completed?:number;total?:number;}
 export const TERMINAL=new Set(['complete','verified','empty','cancelled']);
 export const STATES:Record<string,string>={pending:'PC 접수 대기',dispatching:'실행 요청 전달 중',queued:'Codex 실행 대기',running:'Chat 분석 중',review:'Work 검증 중',publishing:'Git 게시 확인 중',waiting:'확인 대기',blocked:'조치 필요',complete:'Git 게시 완료',verified:'연결 확인 완료',empty:'새 논문 없음',cancelled:'요청 취소'};
-export const PDF_PATH=/^PDF\/(?!.*(?:^|\/)\.\.?\/)[^\\\r\n:|#<>"?*]+\.pdf$/i;
+export const PDF_PATH=/^(?:Paper|PDF)\/(?!.*(?:^|\/)\.\.?\/)[^\\\r\n:|#<>"?*]+\.pdf$/i;
 export function parseRequest(text:string,filename?:string):RunRequest {
   if(text.length>2048)throw Error('실행 요청이 너무 큽니다.');
   const r=JSON.parse(text);

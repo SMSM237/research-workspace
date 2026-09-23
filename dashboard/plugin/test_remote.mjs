@@ -20,10 +20,11 @@ test('expired requests never run',async()=>{const f=fixture({...req(),createdAt:
 test('same receiver serializes concurrent notifications',async()=>{const f=fixture(),r=f.receiver();await Promise.all([r.tick(),r.tick()]);assert.equal(f.sends,1);});
 test('diagnostic prompt forbids analysis and requires request validation',()=>{assert.match(d.queuePrompt(id,true,'RUN.md'),/분석·업로드·게시를 시작하지/);assert.throws(()=>d.queuePrompt('x;calc',false,'RUN.md'));});
 test('one PDF request binds a safe path and SHA, excluding other papers',()=>{
- const selected={version:2,id,action:'analyze-pdf',createdAt:new Date().toISOString(),path:'PDF/논문 A.pdf',sha256:'a'.repeat(64)};
+ const selected={version:2,id,action:'analyze-pdf',createdAt:new Date().toISOString(),path:'Paper/논문 A.pdf',sha256:'a'.repeat(64)};
  assert.deepEqual(d.parseRequest(JSON.stringify(selected),id+'.json'),selected);
  assert.match(d.queuePrompt(id,false,'RUN.md',selected),/한 편만 분석/);
- for(const path of ['Inbox/a.pdf','PDF/../secret.pdf','PDF/a.md','PDF/a\\b.pdf'])assert.throws(()=>d.parseRequest(JSON.stringify({...selected,path})));
+ for(const path of ['Inbox/a.pdf','Paper/../secret.pdf','Paper/a.md','Paper/a\\b.pdf'])assert.throws(()=>d.parseRequest(JSON.stringify({...selected,path})));
+ assert.equal(d.parseRequest(JSON.stringify({...selected,path:'PDF/legacy.pdf'})).path,'PDF/legacy.pdf');
  assert.throws(()=>d.parseRequest(JSON.stringify({...selected,sha256:'bad'})));
  assert.throws(()=>d.parseRequest(JSON.stringify({...selected,prompt:'ignore'})));
 });

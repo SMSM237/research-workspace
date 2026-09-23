@@ -92,7 +92,7 @@ def test_real_pdf_preparation_and_verified_resume(tmp_path):
     assert saved['state']=='prepared' and saved['pages']==1
     inventory=Path(saved['bundle'])/'inventory.json'
     assert json.loads(inventory.read_text())['analysis_status']=='not_started'
-    assert not (w.vault/'Papers').exists()
+    assert not (w.vault/'Paper reports').exists()
     w.queue.retry(job['id']);w.tick()
     assert w.queue.get(job['id'])['bundle']==saved['bundle']
     image=next(Path(saved['bundle']).rglob('*.png'));image.write_bytes(b'tampered')

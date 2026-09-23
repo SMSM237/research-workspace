@@ -51,7 +51,7 @@ def render_markdown(data: dict[str,Any]) -> str:
             return _md(n['text'])+refs(n['refs'])+'\n\n'
         if t=='list': return '\n'.join('- '+(node(item).strip().replace('\n','\n  ') if rich else node(item).strip()) for item in n['items'])+'\n\n'
         if t=='link': return f'[{_md(n["text"])}](#{n["target"]})\n\n'
-        if t in {'image','concept-image'}: return f'![{_md(n["alt"])}]({posixpath.relpath(n["path"],"Papers")})\n\n'
+        if t in {'image','concept-image'}: return f'![{_md(n["alt"])}]({posixpath.relpath(n["path"],"Paper reports")})\n\n'
         if t=='callout':
             fold='' if n['kind']=='rr-critical' else ('-' if n['kind'] in {'rr-detail','rr-supplement'} else '+')
             anchor=f'<a id="{n["id"]}"></a>\n\n' if n['id'] else ''
