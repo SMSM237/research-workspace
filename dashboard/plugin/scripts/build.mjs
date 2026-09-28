@@ -31,6 +31,7 @@ writeFileSync('reader-data.test-build.cjs',readerData);
 writeFileSync('annotation-data.test-build.cjs',compile('src/annotation-data.ts'));
 writeFileSync('status-data.test-build.cjs',compile('src/status-data.ts'));
 writeFileSync('dashboard-data.test-build.cjs',compile('src/dashboard-data.ts'));
+writeFileSync('dashboard-refresh.test-build.cjs',compile('src/dashboard-refresh.ts'));
 writeFileSync('dashboard-records.test-build.cjs',compile('src/dashboard-records.ts'));
 writeFileSync('meeting-data.test-build.cjs',compile('src/meeting-data.ts'));
 writeFileSync('remote-data.test-build.cjs',compile('src/remote-data.ts'));
@@ -38,7 +39,7 @@ writeFileSync('remote-receiver.test-build.cjs',compile('src/remote-receiver.ts')
 if(!process.argv.includes('--policy-only')) {
   const marker='/* Research Dashboard bundled styles */';
   writeFileSync('styles.css',readFileSync('styles.css','utf8').split(marker)[0].trimEnd()+'\n'+marker+'\n'+readFileSync('dashboard.css','utf8')+'\n'+readFileSync('color-cards.css','utf8')+'\n'+readFileSync('meeting.css','utf8')+'\n'+readFileSync('remote-control.css','utf8')+'\n'+readFileSync('graph3d.css','utf8')+'\n'+readFileSync('dashboard-layout.css','utf8'));
-  const names=['paper-relations','graph-3d','daily-verse','policy','reader-data','annotation-data','status-data','dashboard-data','dashboard-extras','dashboard-records','record-dialogs','meeting-data','meeting-view','task-celebration','dashboard','library','annotations','mobile-reader','remote-data','remote-receiver','remote-control','main'];
+  const names=['paper-relations','graph-3d','daily-verse','policy','reader-data','annotation-data','status-data','dashboard-data','dashboard-refresh','dashboard-extras','dashboard-records','record-dialogs','meeting-data','meeting-view','task-celebration','dashboard','library','annotations','mobile-reader','remote-data','remote-receiver','remote-control','main'];
   const modules=names.map(name=>`${JSON.stringify('./'+name)}:(module,exports,require)=>{\n${compile('src/'+name+'.ts')}\n}`).join(',\n');
   writeFileSync('main.js',`Object.assign(exports,(()=>{const modules={${modules}};const cache={};const load=(id)=>{if(!modules[id])return require(id);if(cache[id])return cache[id].exports;const m={exports:{}};cache[id]=m;modules[id](m,m.exports,load);return m.exports;};return load('./main');})());\n`);
 }

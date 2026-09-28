@@ -11,6 +11,7 @@ import {DashboardRecords} from './dashboard-records';
 import {MEETING_VIEW} from './meeting-view';
 import {ScheduleEditor,TaskEditor,MeetingCreateModal} from './record-dialogs';
 import {DashboardExtras} from './dashboard-extras';
+import {shouldRefreshCard} from './dashboard-refresh';
 import {WorkerJobs,workerRecord,workerModel} from './library';
 
 const DESKTOP='research-dashboard';
@@ -24,19 +25,21 @@ export class ResearchDashboard {
   private celebration=new TaskCelebration();
   extras:DashboardExtras;
   records:DashboardRecords;
-  refresh(){this.cache=null;this.listeners.forEach(fn=>fn());}
+  refresh(path=''){this.cache=null;this.notify(path);}
   selectedDay='';
-  selectDay(day:string){this.selectedDay=day;this.listeners.forEach(fn=>fn());}
-  private cache:Promise<Snapshot>|null=null;private listeners=new Set<()=>void>();private timer:number|undefined;
+  selectDay(day:string){this.selectedDay=day;this.notify('@selection');}
+  private cache:Promise<Snapshot>|null=null;private listeners=new Set<{kind:string;fn:()=>void}>();private timer:number|undefined;
+  private notify(path=''){for(const listener of this.listeners)if(shouldRefreshCard(listener.kind,path))listener.fn();}
   constructor(private plugin:Plugin){
-    this.records=new DashboardRecords(plugin.app,()=>this.refresh());
+    this.records=new DashboardRecords(plugin.app,path=>this.refresh(path));
     plugin.registerView(DESKTOP,leaf=>new DesktopDashboard(leaf,this));
-    this.extras=new DashboardExtras(plugin,()=>this.listeners.forEach(fn=>fn()));
-    let lastDay=localDay();plugin.registerInterval(window.setInterval(()=>{if(localDay()!==lastDay){lastDay=localDay();this.cache=null;this.listeners.forEach(fn=>fn());}},30000));
+    this.extras=new DashboardExtras(plugin,()=>this.notify('.research-activity/'));
+    let lastDay=localDay();plugin.registerInterval(window.setInterval(()=>{if(localDay()!==lastDay){lastDay=localDay();this.refresh();}},30000));
     plugin.registerMarkdownCodeBlockProcessor('research-module',(source,el,ctx)=>{ctx.addChild(new ModuleView(el,this,source.trim()));});
-    const refresh=()=>{this.cache=null;if(this.timer!==undefined)window.clearTimeout(this.timer);this.timer=window.setTimeout(()=>{this.listeners.forEach(fn=>fn());},180);};
-    for(const event of ['create','modify','delete','rename'] as const)plugin.registerEvent((plugin.app.vault.on as any)(event,refresh));
-    plugin.registerEvent(plugin.app.metadataCache.on('resolved',refresh));
+    const pending=new Set<string>();
+    const refresh=(file:TFile,oldPath?:string)=>{if(!(file instanceof TFile))return;this.cache=null;pending.add(file.path);if(oldPath)pending.add(oldPath);if(this.timer!==undefined)window.clearTimeout(this.timer);this.timer=window.setTimeout(()=>{for(const path of pending)this.notify(path);pending.clear();},180);};
+    for(const event of ['create','modify','delete','rename'] as const)plugin.registerEvent((plugin.app.vault.on as any)(event,(file:TFile,oldPath?:string)=>refresh(file,event==='rename'?oldPath:undefined)));
+    plugin.registerEvent(plugin.app.metadataCache.on('changed',file=>refresh(file)));
     plugin.register(()=>{if(this.timer!==undefined)window.clearTimeout(this.timer);this.listeners.clear();this.celebration.destroy();});
     plugin.addRibbonIcon('house','연구 홈',()=>void this.openHome());
     plugin.addCommand({id:'research-home',name:'연구 홈 열기',callback:()=>void this.openHome()});
@@ -50,7 +53,7 @@ export class ResearchDashboard {
   async openAnalysisStatus(){await (this.plugin as any).remoteControl?.open();}
   async newSchedule(title:string,day:string,time:string){if(!validDay(day)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(time))throw Error('회의 날짜와 시간을 입력해 주세요.');const safe=title.trim().replace(/[<>:"/\\|?*\x00-\x1f]/g,' ').replace(/[. ]+$/,'').slice(0,90);if(!safe)throw Error('회의 제목을 입력해 주세요.');await this.ensureFolder('Meetings/Schedule');const path=`Meetings/Schedule/${day} ${time.replace(':','')} ${safe}.md`;if(this.app.vault.getAbstractFileByPath(path))throw Error('같은 회의 일정이 있습니다.');await this.app.vault.create(path,`---\ntype: meeting_schedule\ndate: ${day}\ntime: "${time}"\ntitle: ${JSON.stringify(safe)}\n---\n# ${safe}\n\n## 관련 프로젝트·논문\n\n## 준비할 내용\n\n## 회의록\n\n`);this.cache=null;}
   async jobs(){try{const {value}=await workerRecord(this.app,true);if(!value)return [];if(value.version!==1||!Array.isArray(value.jobs))throw Error();return value.jobs;}catch{throw Error('분석 작업 기록을 읽지 못했습니다.');}}
-  subscribe(fn:()=>void){this.listeners.add(fn);return ()=>this.listeners.delete(fn);}
+  subscribe(kind:string,fn:()=>void){const listener={kind,fn};this.listeners.add(listener);return ()=>this.listeners.delete(listener);}
   async openHome(mobile=Platform.isMobile){if(mobile){await this.open(MOBILE,false);return;}const leaf=this.app.workspace.getLeavesOfType(DESKTOP)[0]||this.app.workspace.getLeaf('tab');await leaf.setViewState({type:DESKTOP,active:true});this.app.workspace.setActiveLeaf(leaf,{focus:true});}
   private sizeRightPane(leaf:WorkspaceLeaf){
     if(Platform.isMobile)return;
@@ -131,7 +134,7 @@ class ModuleView extends MarkdownRenderChild {
   private alive=false;private body!:HTMLElement;private error!:HTMLElement;private filter='all';private ticket=0;
   constructor(el:HTMLElement,private dashboard:ResearchDashboard,private kind:string){super(el);}
   onload(){this.alive=true;const saved=this.dashboard.app.loadLocalStorage('research-dashboard-view')||{};if(typeof saved.project==='string')this.projectPath=saved.project;const root=this.containerEl;root.empty();root.classList.add('rd-module');root.dataset.module=this.kind;
-    if(this.kind==='home'){root.classList.add('rd-home');this.error=root.createEl('p',{cls:'rd-error',attr:{role:'alert'}});this.error.hidden=true;this.body=root.createDiv({cls:'rd-home-content'});this.register(this.dashboard.subscribe(()=>void this.renderHome()));void this.renderHome();this.registerInterval(window.setInterval(()=>void this.renderHome(),1800000));let midnight=0;const nextDay=()=>{window.clearTimeout(midnight);midnight=window.setTimeout(()=>{if(!this.alive)return;void this.renderHome();nextDay();},millisUntilNextDay());};nextDay();this.register(()=>window.clearTimeout(midnight));this.registerDomEvent(document,'visibilitychange',()=>{if(!document.hidden){void this.renderHome();nextDay();}});this.registerDomEvent(window,'focus',()=>{void this.renderHome();nextDay();});return;}
+    if(this.kind==='home'){root.classList.add('rd-home');this.error=root.createEl('p',{cls:'rd-error',attr:{role:'alert'}});this.error.hidden=true;this.body=root.createDiv({cls:'rd-home-content'});this.register(this.dashboard.subscribe(this.kind,()=>void this.renderHome()));void this.renderHome();this.registerInterval(window.setInterval(()=>void this.renderHome(),1800000));let midnight=0;const nextDay=()=>{window.clearTimeout(midnight);midnight=window.setTimeout(()=>{if(!this.alive)return;void this.renderHome();nextDay();},millisUntilNextDay());};nextDay();this.register(()=>window.clearTimeout(midnight));this.registerDomEvent(document,'visibilitychange',()=>{if(!document.hidden){void this.renderHome();nextDay();}});this.registerDomEvent(window,'focus',()=>{void this.renderHome();nextDay();});return;}
     const meta=MODULES[this.kind];if(!meta){root.createEl('p',{text:'알 수 없는 모듈입니다. 원본 노트의 모듈 이름을 확인해 주세요.'});return;}
      const h=root.createDiv({cls:'rd-module-heading'});const icon=h.createSpan({cls:'rd-icon',attr:{'aria-hidden':'true'}});setIcon(icon,meta[2]);const heading=h.createEl('h2');if(this.kind==='papers'){const open=heading.createEl('button',{cls:'rd-library-open',text:meta[0],attr:{type:'button','aria-label':'분석된 논문 목록 열기',title:'왼쪽 사이드바에서 논문 보관함 열기'}});open.onclick=()=>void this.act(()=>this.dashboard.openLibrary());}else heading.textContent=meta[0];if(['queue','papers','meetings'].includes(this.kind))heading.createSpan({cls:'rd-card-count',text:'0'});if(!['papers','queue','graph'].includes(this.kind))root.createEl('p',{text:meta[1],cls:'rd-subtitle'});else if(this.kind==='queue')h.createDiv({cls:'rd-paper-connection'});
     this.error=root.createEl('p',{cls:'rd-error',attr:{role:'alert'}});this.error.hidden=true;
@@ -139,7 +142,7 @@ class ModuleView extends MarkdownRenderChild {
     if(this.kind==='tasks'){h.createSpan({cls:'rd-task-day'});const today=this.button(h,'↩',async()=>this.dashboard.selectDay(''));today.classList.add('rd-task-today');today.setAttribute('aria-label','오늘 할 일로 돌아가기');today.title='오늘 할 일로 돌아가기';this.taskForm(root);}if(this.kind==='schedules')this.scheduleForm(h);
     if(this.kind==='projects'){const add=h.createEl('button',{text:'+',cls:'rd-new-project-button',attr:{type:'button','aria-label':'연구 프로젝트 추가',title:'연구 프로젝트 추가','aria-haspopup':'dialog'}});add.onclick=()=>new MeetingCreateModal(this.dashboard.app,async title=>{this.projectPath=await this.dashboard.newNote('Projects',title);this.saveView();this.dashboard.refresh();},'project').open();this.setupCollapse(h,root,'projects',!!saved.projectsCollapsed);}
     if(this.kind==='meetings'){const add=h.createEl('button',{text:'새 회의록',cls:'rd-new-meeting',attr:{type:'button','aria-haspopup':'dialog'}});add.onclick=()=>new MeetingCreateModal(this.dashboard.app,async title=>{await this.dashboard.newNote('Meetings',title);this.dashboard.refresh();}).open();this.setupCollapse(h,root,'meetings',!!saved.meetingsCollapsed);}
-    this.register(this.dashboard.subscribe(()=>void this.render()));void this.render();
+    this.register(this.dashboard.subscribe(this.kind,()=>void this.render()));void this.render();
     if(this.kind==='queue')this.registerInterval(window.setInterval(()=>void this.renderWorker(),5000));
   }
    onunload(){this.alive=false;this.ticket++;this.projectResize?.disconnect();this.graph3d?.destroy();}
@@ -154,7 +157,7 @@ class ModuleView extends MarkdownRenderChild {
   private button(parent:HTMLElement,label:string,fn:()=>Promise<unknown>,icon?:string){const b=parent.createEl('button',{text:label,attr:{type:'button'}});if(icon){const i=b.createSpan({cls:'rd-button-icon',attr:{'aria-hidden':'true'}});setIcon(i,icon);b.prepend(i);}b.onclick=()=>void this.act(fn);return b;}
   private link(parent:HTMLElement,file:TFile,label=file.basename){const b=parent.createEl('button',{cls:'rd-note-link',text:label,attr:{type:'button'}});b.title=label;b.onclick=()=>void this.act(()=>this.dashboard.open(file.path));return b;}
   private taskForm(root:HTMLElement){const f=root.createEl('form',{cls:'rd-add-task rd-simple-task'});const title=f.createEl('input',{type:'text',placeholder:'할 일을 적고 Enter',attr:{'aria-label':'새 할 일',maxlength:'500',required:'true'}});const submit=f.createEl('button',{text:'추가',type:'submit'});f.onsubmit=e=>{e.preventDefault();if(!title.value.trim())return;submit.disabled=true;void this.act(async()=>{await this.dashboard.append('Tasks/할 일.md',newDailyTask(title.value,this.dashboard.selectedDay||localDay(),localDay(),crypto.randomUUID().slice(0,8)));title.value='';title.focus();}).finally(()=>submit.disabled=false);};}
-  private taskRow(parent:HTMLElement,t:Task){const row=parent.createDiv({cls:'rd-task-row'+(t.done?' is-done':'')});const wrap=row.createEl('label',{cls:'rd-task-check'});const check=wrap.createEl('input',{type:'checkbox',attr:{'aria-label':`${t.title} ${t.done?'완료 취소':'완료'}`}});check.checked=t.done;check.onchange=()=>{check.disabled=true;void this.act(()=>this.dashboard.toggle(t,row)).finally(()=>check.disabled=false);};const label=row.createDiv({cls:'rd-task-text'});const edit=label.createEl('button',{text:t.title,cls:'rd-task-label rd-task-edit',attr:{type:'button','aria-label':t.title+' 수정','aria-haspopup':'dialog'}});edit.onclick=()=>new TaskEditor(this.dashboard.app,this.dashboard.records,t,()=>this.dashboard.refresh()).open();if(!t.done&&taskStart(t)&&taskStart(t)<(this.dashboard.selectedDay||localDay())&&(this.dashboard.selectedDay||localDay())<=localDay()&&t.path.startsWith('Tasks/'))label.createSpan({text:'이월',cls:'rd-carry-tag'});}
+  private taskRow(parent:HTMLElement,t:Task){const row=parent.createDiv({cls:'rd-task-row'+(t.done?' is-done':'')});const wrap=row.createEl('label',{cls:'rd-task-check'});const check=wrap.createEl('input',{type:'checkbox',attr:{'aria-label':`${t.title} ${t.done?'완료 취소':'완료'}`}});check.checked=t.done;check.onchange=()=>{check.disabled=true;void this.act(()=>this.dashboard.toggle(t,row)).finally(()=>check.disabled=false);};const label=row.createDiv({cls:'rd-task-text'});const edit=label.createEl('button',{text:t.title,cls:'rd-task-label rd-task-edit',attr:{type:'button','aria-label':t.title+' 수정','aria-haspopup':'dialog'}});edit.onclick=()=>new TaskEditor(this.dashboard.app,this.dashboard.records,t,()=>this.dashboard.refresh(t.path)).open();if(!t.done&&taskStart(t)&&taskStart(t)<(this.dashboard.selectedDay||localDay())&&(this.dashboard.selectedDay||localDay())<=localDay()&&t.path.startsWith('Tasks/'))label.createSpan({text:'이월',cls:'rd-carry-tag'});}
   private noteForm(root:HTMLElement,kind:'Projects'|'Meetings'){{const details=root.createEl('details',{cls:'rd-new-project'});details.createEl('summary',{text:kind==='Projects'?'새 프로젝트':'새 회의록'});root=details;}const form=root.createEl('form',{cls:'rd-new-note'});const name=form.createEl('input',{type:'text',placeholder:kind==='Projects'?'새 프로젝트 이름':'새 회의 제목',attr:{'aria-label':kind==='Projects'?'새 프로젝트 이름':'새 회의 제목',required:'true',maxlength:'90'}});const b=form.createEl('button',{text:'만들기',type:'submit'});form.onsubmit=e=>{e.preventDefault();b.disabled=true;void this.act(async()=>{await this.dashboard.newNote(kind,name.value);name.value='';}).finally(()=>b.disabled=false);};}
   private empty(text:string){this.body.createEl('p',{cls:'rd-empty',text});}
   private scheduleForm(heading:HTMLElement){

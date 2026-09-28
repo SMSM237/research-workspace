@@ -18,19 +18,19 @@ function parts(raw:string){const match=raw.match(/^---\r?\n([\s\S]*?)\r?\n---(?:
 function rewritten(raw:string,patch:Record<string,unknown>){const {fm,body,sep}=parts(raw);return '---'+sep+stringifyYaml({...fm,...patch}).trimEnd().replace(/\r?\n/g,sep)+sep+'---'+sep+body;}
 function cleanTitle(value:string){const title=value.trim().replace(/[<>:"/\\|?*\x00-\x1f]/g,' ').replace(/[. ]+$/,'').slice(0,90);if(!title)throw Error('회의 제목을 입력해 주세요.');return title;}
 export class DashboardRecords {
-  constructor(private app:App,private changed:()=>void){}
+  constructor(private app:App,private changed:(path:string)=>void){}
   hasMinutes(record:ScheduleRecord):boolean{return !!record.minutes&&this.app.vault.getAbstractFileByPath(record.minutes) instanceof TFile;}
   async read(file:TFile):Promise<ScheduleRecord>{const raw=await this.app.vault.read(file),{fm}=parts(raw);return {file,raw,title:String(fm.title||file.basename),day:String(fm.date||''),time:String(fm.time||''),minutes:typeof fm.minutes==='string'?fm.minutes:'',completed:fm.completed===true};}
   async setCompleted(record:ScheduleRecord,completed:boolean){
     await this.app.vault.process(record.file,raw=>{if(raw!==record.raw)throw Error('일정이 변경되었습니다. 다시 선택해 주세요.');return rewritten(raw,{completed,completed_date:completed?localDay():''});});
-    this.changed();return this.read(record.file);
+    this.changed(record.file.path);return this.read(record.file);
   }
   async edit(record:ScheduleRecord,title:string,day:string,time:string){
     title=cleanTitle(title);if(!validDay(day)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(time))throw Error('회의 날짜와 시간을 확인해 주세요.');
-    await this.app.vault.process(record.file,raw=>{if(raw!==record.raw)throw Error('다른 곳에서 일정이 변경되었습니다. 창을 닫고 다시 열어 주세요.');return rewritten(raw,{title,date:day,time});});this.changed();return this.read(record.file);
+    await this.app.vault.process(record.file,raw=>{if(raw!==record.raw)throw Error('다른 곳에서 일정이 변경되었습니다. 창을 닫고 다시 열어 주세요.');return rewritten(raw,{title,date:day,time});});this.changed(record.file.path);return this.read(record.file);
   }
-  async removeSchedule(record:ScheduleRecord){if(await this.app.vault.read(record.file)!==record.raw)throw Error('일정이 변경되었습니다. 창을 닫고 다시 열어 주세요.');await this.app.fileManager.trashFile(record.file);this.changed();}
-  async editTask(task:Task,value:string|null){const file=this.app.vault.getAbstractFileByPath(task.path);if(!(file instanceof TFile))throw Error('할 일 원본이 없습니다.');await this.app.vault.process(file,text=>changeTask(text,task,value));this.changed();}
+  async removeSchedule(record:ScheduleRecord){if(await this.app.vault.read(record.file)!==record.raw)throw Error('일정이 변경되었습니다. 창을 닫고 다시 열어 주세요.');await this.app.fileManager.trashFile(record.file);this.changed(record.file.path);}
+  async editTask(task:Task,value:string|null){const file=this.app.vault.getAbstractFileByPath(task.path);if(!(file instanceof TFile))throw Error('할 일 원본이 없습니다.');await this.app.vault.process(file,text=>changeTask(text,task,value));this.changed(task.path);}
   async minutes(record:ScheduleRecord):Promise<TFile>{
     // Re-read the schedule so existing minutes are reused across devices and reopens.
     record=await this.read(record.file);
@@ -45,6 +45,6 @@ export class DashboardRecords {
     else file=await this.app.vault.create(path,`---\ntype: meeting\ntitle: ${JSON.stringify(record.title)}\ndate: ${record.day}\ntime: ${JSON.stringify(record.time)}\nschedule: ${JSON.stringify(record.file.path)}\ncssclasses:\n  - research-meeting\n---\n# ${record.title}\n\n${record.day} · ${record.time}\n\n## 참석자\n\n\n## 안건\n\n\n## 논의 내용\n\n\n## 결정 사항\n\n\n## 후속 할 일\n\n<!-- - [ ] 할 일 내용 -->\n\n`);
     const minutes=file as TFile;
     await this.app.vault.process(record.file,raw=>{if(raw!==record.raw)throw Error('일정이 변경되었습니다. 생성된 회의록은 회의록 목록에 보관했습니다. 다시 열어 연결해 주세요.');return rewritten(raw,{minutes:minutes.path});});
-    this.changed();return minutes;
+    this.changed(record.file.path);return minutes;
   }
 }

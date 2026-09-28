@@ -699,6 +699,46 @@ function planWeekStep(year, month, start, delta) {
 }
 
 },
+"./dashboard-refresh":(module,exports,require)=>{
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.shouldRefreshCard = shouldRefreshCard;
+// Keep expensive cards mounted when an unrelated vault file changes.
+function shouldRefreshCard(kind, path) {
+    if (!path)
+        return true;
+    if (path === '@selection')
+        return ['tasks', 'calendar', 'schedules'].includes(kind);
+    if (path.startsWith('.research-activity/'))
+        return kind === 'home';
+    if (path.startsWith('Tasks/'))
+        return ['tasks', 'weekly', 'calendar'].includes(kind);
+    if (path.startsWith('Projects/'))
+        return ['tasks', 'weekly', 'calendar', 'projects', 'connections', 'home'].includes(kind);
+    if (path.startsWith('Meetings/'))
+        return ['tasks', 'weekly', 'calendar', 'schedules', 'meetings', 'connections', 'home'].includes(kind);
+    if (path.startsWith('Notes/'))
+        return ['tasks', 'weekly', 'calendar', 'home'].includes(kind);
+    if (path.startsWith('Paper reports/'))
+        return ['papers', 'queue', 'graph', 'connections', 'home'].includes(kind);
+    if (path.startsWith('Paper/'))
+        return ['queue', 'graph', 'home'].includes(kind);
+    if (path === 'Dashboard/pdf-links.json')
+        return ['queue', 'graph'].includes(kind);
+    if (path === '.figure-reports/dashboard-weather.json')
+        return kind === 'home';
+    if (/^\.figure-reports\/[^/]+\/analysis\.json$/.test(path))
+        return kind === 'graph';
+    if (path.startsWith('.figure-reports/'))
+        return kind === 'queue';
+    if (path.startsWith('.paper-control/'))
+        return kind === 'queue';
+    if (path === 'Dashboard/논문 목록.md')
+        return false;
+    return kind === 'home';
+}
+
+},
 "./dashboard-extras":(module,exports,require)=>{
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -827,7 +867,7 @@ class DashboardRecords {
     async setCompleted(record, completed) {
         await this.app.vault.process(record.file, raw => { if (raw !== record.raw)
             throw Error('일정이 변경되었습니다. 다시 선택해 주세요.'); return rewritten(raw, { completed, completed_date: completed ? (0, dashboard_data_1.localDay)() : '' }); });
-        this.changed();
+        this.changed(record.file.path);
         return this.read(record.file);
     }
     async edit(record, title, day, time) {
@@ -836,13 +876,13 @@ class DashboardRecords {
             throw Error('회의 날짜와 시간을 확인해 주세요.');
         await this.app.vault.process(record.file, raw => { if (raw !== record.raw)
             throw Error('다른 곳에서 일정이 변경되었습니다. 창을 닫고 다시 열어 주세요.'); return rewritten(raw, { title, date: day, time }); });
-        this.changed();
+        this.changed(record.file.path);
         return this.read(record.file);
     }
     async removeSchedule(record) { if (await this.app.vault.read(record.file) !== record.raw)
-        throw Error('일정이 변경되었습니다. 창을 닫고 다시 열어 주세요.'); await this.app.fileManager.trashFile(record.file); this.changed(); }
+        throw Error('일정이 변경되었습니다. 창을 닫고 다시 열어 주세요.'); await this.app.fileManager.trashFile(record.file); this.changed(record.file.path); }
     async editTask(task, value) { const file = this.app.vault.getAbstractFileByPath(task.path); if (!(file instanceof obsidian_1.TFile))
-        throw Error('할 일 원본이 없습니다.'); await this.app.vault.process(file, text => changeTask(text, task, value)); this.changed(); }
+        throw Error('할 일 원본이 없습니다.'); await this.app.vault.process(file, text => changeTask(text, task, value)); this.changed(task.path); }
     async minutes(record) {
         // Re-read the schedule so existing minutes are reused across devices and reopens.
         record = await this.read(record.file);
@@ -871,7 +911,7 @@ class DashboardRecords {
         const minutes = file;
         await this.app.vault.process(record.file, raw => { if (raw !== record.raw)
             throw Error('일정이 변경되었습니다. 생성된 회의록은 회의록 목록에 보관했습니다. 다시 열어 연결해 주세요.'); return rewritten(raw, { minutes: minutes.path }); });
-        this.changed();
+        this.changed(record.file.path);
         return minutes;
     }
 }
@@ -1283,6 +1323,7 @@ const dashboard_records_1 = require("./dashboard-records");
 const meeting_view_1 = require("./meeting-view");
 const record_dialogs_1 = require("./record-dialogs");
 const dashboard_extras_1 = require("./dashboard-extras");
+const dashboard_refresh_1 = require("./dashboard-refresh");
 const library_1 = require("./library");
 const DESKTOP = 'research-dashboard';
 const PC = 'Dashboard/연구 홈.canvas', MOBILE = 'Dashboard/모바일 홈.md';
@@ -1291,8 +1332,11 @@ MODULES.calendar = ['달력', '날짜별 회의와 할 일 기록', 'calendar-da
 MODULES.schedules = ['회의 일정', '예정된 만남과 준비', 'calendar-clock'];
 MODULES.graph = ['그래프뷰', '공통 주제·개념으로 찾는 논문 연결', 'network'];
 class ResearchDashboard {
-    refresh() { this.cache = null; this.listeners.forEach(fn => fn()); }
-    selectDay(day) { this.selectedDay = day; this.listeners.forEach(fn => fn()); }
+    refresh(path = '') { this.cache = null; this.notify(path); }
+    selectDay(day) { this.selectedDay = day; this.notify('@selection'); }
+    notify(path = '') { for (const listener of this.listeners)
+        if ((0, dashboard_refresh_1.shouldRefreshCard)(listener.kind, path))
+            listener.fn(); }
     constructor(plugin) {
         this.plugin = plugin;
         this.celebration = new task_celebration_1.TaskCelebration();
@@ -1302,21 +1346,24 @@ class ResearchDashboard {
         this.indexQueue = Promise.resolve();
         this.indexError = "";
         this.profileCache = new Map();
-        this.records = new dashboard_records_1.DashboardRecords(plugin.app, () => this.refresh());
+        this.records = new dashboard_records_1.DashboardRecords(plugin.app, path => this.refresh(path));
         plugin.registerView(DESKTOP, leaf => new DesktopDashboard(leaf, this));
-        this.extras = new dashboard_extras_1.DashboardExtras(plugin, () => this.listeners.forEach(fn => fn()));
+        this.extras = new dashboard_extras_1.DashboardExtras(plugin, () => this.notify('.research-activity/'));
         let lastDay = (0, dashboard_data_3.localDay)();
         plugin.registerInterval(window.setInterval(() => { if ((0, dashboard_data_3.localDay)() !== lastDay) {
             lastDay = (0, dashboard_data_3.localDay)();
-            this.cache = null;
-            this.listeners.forEach(fn => fn());
+            this.refresh();
         } }, 30000));
         plugin.registerMarkdownCodeBlockProcessor('research-module', (source, el, ctx) => { ctx.addChild(new ModuleView(el, this, source.trim())); });
-        const refresh = () => { this.cache = null; if (this.timer !== undefined)
-            window.clearTimeout(this.timer); this.timer = window.setTimeout(() => { this.listeners.forEach(fn => fn()); }, 180); };
+        const pending = new Set();
+        const refresh = (file, oldPath) => { if (!(file instanceof obsidian_1.TFile))
+            return; this.cache = null; pending.add(file.path); if (oldPath)
+            pending.add(oldPath); if (this.timer !== undefined)
+            window.clearTimeout(this.timer); this.timer = window.setTimeout(() => { for (const path of pending)
+            this.notify(path); pending.clear(); }, 180); };
         for (const event of ['create', 'modify', 'delete', 'rename'])
-            plugin.registerEvent(plugin.app.vault.on(event, refresh));
-        plugin.registerEvent(plugin.app.metadataCache.on('resolved', refresh));
+            plugin.registerEvent(plugin.app.vault.on(event, (file, oldPath) => refresh(file, event === 'rename' ? oldPath : undefined)));
+        plugin.registerEvent(plugin.app.metadataCache.on('changed', file => refresh(file)));
         plugin.register(() => { if (this.timer !== undefined)
             window.clearTimeout(this.timer); this.listeners.clear(); this.celebration.destroy(); });
         plugin.addRibbonIcon('house', '연구 홈', () => void this.openHome());
@@ -1347,7 +1394,7 @@ class ResearchDashboard {
     catch {
         throw Error('분석 작업 기록을 읽지 못했습니다.');
     } }
-    subscribe(fn) { this.listeners.add(fn); return () => this.listeners.delete(fn); }
+    subscribe(kind, fn) { const listener = { kind, fn }; this.listeners.add(listener); return () => this.listeners.delete(listener); }
     async openHome(mobile = obsidian_1.Platform.isMobile) { if (mobile) {
         await this.open(MOBILE, false);
         return;
@@ -1533,7 +1580,7 @@ class ModuleView extends obsidian_1.MarkdownRenderChild {
             this.error = root.createEl('p', { cls: 'rd-error', attr: { role: 'alert' } });
             this.error.hidden = true;
             this.body = root.createDiv({ cls: 'rd-home-content' });
-            this.register(this.dashboard.subscribe(() => void this.renderHome()));
+            this.register(this.dashboard.subscribe(this.kind, () => void this.renderHome()));
             void this.renderHome();
             this.registerInterval(window.setInterval(() => void this.renderHome(), 1800000));
             let midnight = 0;
@@ -1593,7 +1640,7 @@ class ModuleView extends obsidian_1.MarkdownRenderChild {
             add.onclick = () => new record_dialogs_1.MeetingCreateModal(this.dashboard.app, async (title) => { await this.dashboard.newNote('Meetings', title); this.dashboard.refresh(); }).open();
             this.setupCollapse(h, root, 'meetings', !!saved.meetingsCollapsed);
         }
-        this.register(this.dashboard.subscribe(() => void this.render()));
+        this.register(this.dashboard.subscribe(this.kind, () => void this.render()));
         void this.render();
         if (this.kind === 'queue')
             this.registerInterval(window.setInterval(() => void this.renderWorker(), 5000));
@@ -1627,7 +1674,7 @@ class ModuleView extends obsidian_1.MarkdownRenderChild {
     link(parent, file, label = file.basename) { const b = parent.createEl('button', { cls: 'rd-note-link', text: label, attr: { type: 'button' } }); b.title = label; b.onclick = () => void this.act(() => this.dashboard.open(file.path)); return b; }
     taskForm(root) { const f = root.createEl('form', { cls: 'rd-add-task rd-simple-task' }); const title = f.createEl('input', { type: 'text', placeholder: '할 일을 적고 Enter', attr: { 'aria-label': '새 할 일', maxlength: '500', required: 'true' } }); const submit = f.createEl('button', { text: '추가', type: 'submit' }); f.onsubmit = e => { e.preventDefault(); if (!title.value.trim())
         return; submit.disabled = true; void this.act(async () => { await this.dashboard.append('Tasks/할 일.md', (0, dashboard_data_3.newDailyTask)(title.value, this.dashboard.selectedDay || (0, dashboard_data_3.localDay)(), (0, dashboard_data_3.localDay)(), crypto.randomUUID().slice(0, 8))); title.value = ''; title.focus(); }).finally(() => submit.disabled = false); }; }
-    taskRow(parent, t) { const row = parent.createDiv({ cls: 'rd-task-row' + (t.done ? ' is-done' : '') }); const wrap = row.createEl('label', { cls: 'rd-task-check' }); const check = wrap.createEl('input', { type: 'checkbox', attr: { 'aria-label': `${t.title} ${t.done ? '완료 취소' : '완료'}` } }); check.checked = t.done; check.onchange = () => { check.disabled = true; void this.act(() => this.dashboard.toggle(t, row)).finally(() => check.disabled = false); }; const label = row.createDiv({ cls: 'rd-task-text' }); const edit = label.createEl('button', { text: t.title, cls: 'rd-task-label rd-task-edit', attr: { type: 'button', 'aria-label': t.title + ' 수정', 'aria-haspopup': 'dialog' } }); edit.onclick = () => new record_dialogs_1.TaskEditor(this.dashboard.app, this.dashboard.records, t, () => this.dashboard.refresh()).open(); if (!t.done && (0, dashboard_data_3.taskStart)(t) && (0, dashboard_data_3.taskStart)(t) < (this.dashboard.selectedDay || (0, dashboard_data_3.localDay)()) && (this.dashboard.selectedDay || (0, dashboard_data_3.localDay)()) <= (0, dashboard_data_3.localDay)() && t.path.startsWith('Tasks/'))
+    taskRow(parent, t) { const row = parent.createDiv({ cls: 'rd-task-row' + (t.done ? ' is-done' : '') }); const wrap = row.createEl('label', { cls: 'rd-task-check' }); const check = wrap.createEl('input', { type: 'checkbox', attr: { 'aria-label': `${t.title} ${t.done ? '완료 취소' : '완료'}` } }); check.checked = t.done; check.onchange = () => { check.disabled = true; void this.act(() => this.dashboard.toggle(t, row)).finally(() => check.disabled = false); }; const label = row.createDiv({ cls: 'rd-task-text' }); const edit = label.createEl('button', { text: t.title, cls: 'rd-task-label rd-task-edit', attr: { type: 'button', 'aria-label': t.title + ' 수정', 'aria-haspopup': 'dialog' } }); edit.onclick = () => new record_dialogs_1.TaskEditor(this.dashboard.app, this.dashboard.records, t, () => this.dashboard.refresh(t.path)).open(); if (!t.done && (0, dashboard_data_3.taskStart)(t) && (0, dashboard_data_3.taskStart)(t) < (this.dashboard.selectedDay || (0, dashboard_data_3.localDay)()) && (this.dashboard.selectedDay || (0, dashboard_data_3.localDay)()) <= (0, dashboard_data_3.localDay)() && t.path.startsWith('Tasks/'))
         label.createSpan({ text: '이월', cls: 'rd-carry-tag' }); }
     noteForm(root, kind) { {
         const details = root.createEl('details', { cls: 'rd-new-project' });
