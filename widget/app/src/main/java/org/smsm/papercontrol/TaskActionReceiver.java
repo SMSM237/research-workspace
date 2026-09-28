@@ -15,6 +15,6 @@ public class TaskActionReceiver extends BroadcastReceiver {
   String key=intent.getStringExtra("key"),raw=intent.getStringExtra("raw");
   if(("toggle".equals(action)||"meeting-toggle".equals(action))&&(key==null||raw==null||key.length()>512||raw.length()>4096))return;
   PendingResult pending=goAsync();
-  WRITES.execute(()->{try{if("toggle".equals(action))new VaultStore(c).change("toggle",key,raw,null);else if("meeting-toggle".equals(action))new VaultStore(c).toggleMeeting(key,raw);PaperWidget.updateAll(c);}catch(Exception e){String message=e instanceof SecurityException?"Vault 접근 권한을 다시 연결해 주세요.":e.getMessage();if(message==null)message="저장하지 못했습니다. 다시 확인해 주세요.";VaultStore.prefs(c).edit().putString("notice",message).apply();String shown=message;new Handler(Looper.getMainLooper()).post(()->Toast.makeText(c,shown,Toast.LENGTH_LONG).show());PaperWidget.updateAll(c);}finally{pending.finish();}});
+  WRITES.execute(()->{try{if("toggle".equals(action))new VaultStore(c).change("toggle",key,raw,null);else if("meeting-toggle".equals(action))new VaultStore(c).toggleMeeting(key,raw);if(!"refresh".equals(action))SyncBridge.afterWrite(c);PaperWidget.updateAll(c);}catch(Exception e){String message=e instanceof SecurityException?"Vault 접근 권한을 다시 연결해 주세요.":e.getMessage();if(message==null)message="저장하지 못했습니다. 다시 확인해 주세요.";VaultStore.prefs(c).edit().putString("notice",message).apply();String shown=message;new Handler(Looper.getMainLooper()).post(()->Toast.makeText(c,shown,Toast.LENGTH_LONG).show());PaperWidget.updateAll(c);}finally{pending.finish();}});
  }
 }

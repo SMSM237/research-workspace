@@ -22,6 +22,6 @@ public class WidgetActionActivity extends Activity {
       default:finish();
     }
   }
-  private void perform(String title){if(busy)return;busy=true;new Thread(()->{try{new VaultStore(this).change(action,key,raw,title);PaperWidget.updateAll(this);runOnUiThread(this::finish);}catch(Exception e){runOnUiThread(()->{busy=false;error(e);});}},"widget-task-write").start();}
+  private void perform(String title){if(busy)return;busy=true;new Thread(()->{try{new VaultStore(this).change(action,key,raw,title);SyncBridge.afterWrite(this);PaperWidget.updateAll(this);runOnUiThread(this::finish);}catch(Exception e){runOnUiThread(()->{busy=false;error(e);});}},"widget-task-write").start();}
   private void error(Exception e){String message=e instanceof SecurityException?"Vault 접근 권한이 없습니다. 앱에서 폴더를 다시 선택해 주세요.":e.getMessage();if(message==null)message="작업을 완료하지 못했습니다.";VaultStore.prefs(this).edit().putString("notice",message).apply();PaperWidget.refresh(this);new AlertDialog.Builder(this).setTitle("확인이 필요합니다").setMessage(message).setPositiveButton("설정",(d,w)->{startActivity(new Intent(this,MainActivity.class));finish();}).setNegativeButton("닫기",(d,w)->finish()).setOnCancelListener(d->finish()).show();}
 }
