@@ -1,9 +1,11 @@
+import os
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
-from vault_git_sync import lock_file, sync, unlock_file
+from vault_git_sync import git, lock_file, sync, unlock_file
 
 
 def run(*args):
@@ -11,6 +13,13 @@ def run(*args):
 
 
 class VaultGitSyncTest(unittest.TestCase):
+    def test_git_subprocess_never_opens_a_console_on_windows(self):
+        completed = subprocess.CompletedProcess(["git"], 0, stdout="", stderr="")
+        with patch("vault_git_sync.subprocess.run", return_value=completed) as invoke:
+            git(Path("vault"), "status")
+        expected = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+        self.assertEqual(invoke.call_args.kwargs["creationflags"], expected)
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)

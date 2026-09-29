@@ -29,6 +29,7 @@ def git(vault: Path, *args: str, accept: tuple[int, ...] = (0,)) -> subprocess.C
         timeout=90,
         env=env,
         check=False,
+        creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
     )
     if result.returncode not in accept:
         detail = (result.stderr or result.stdout).strip()[-1000:]
@@ -132,7 +133,8 @@ def main() -> int:
             code = 1
         result["checked_at"] = datetime.now(timezone.utc).isoformat()
         save_status(args.state_dir / "status.json", result)
-        print(json.dumps(result, ensure_ascii=False))
+        if sys.stdout is not None:
+            print(json.dumps(result, ensure_ascii=False))
         return code
     finally:
         unlock_file(handle)
