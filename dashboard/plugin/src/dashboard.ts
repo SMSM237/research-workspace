@@ -140,8 +140,8 @@ class ModuleView extends MarkdownRenderChild {
     this.error=root.createEl('p',{cls:'rd-error',attr:{role:'alert'}});this.error.hidden=true;
     this.body=root.createDiv({cls:'rd-body'});this.body.createEl('p',{text:'기록을 불러오고 있습니다.',cls:'rd-empty'});
     if(this.kind==='tasks'){h.createSpan({cls:'rd-task-day'});const today=this.button(h,'↩',async()=>this.dashboard.selectDay(''));today.classList.add('rd-task-today');today.setAttribute('aria-label','오늘 할 일로 돌아가기');today.title='오늘 할 일로 돌아가기';this.taskForm(root);}if(this.kind==='schedules')this.scheduleForm(h);
-    if(this.kind==='projects'){const add=h.createEl('button',{text:'+',cls:'rd-new-project-button',attr:{type:'button','aria-label':'연구 프로젝트 추가',title:'연구 프로젝트 추가','aria-haspopup':'dialog'}});add.onclick=()=>new MeetingCreateModal(this.dashboard.app,async title=>{this.projectPath=await this.dashboard.newNote('Projects',title);this.saveView();this.dashboard.refresh();},'project').open();this.setupCollapse(h,root,'projects',!!saved.projectsCollapsed);}
-    if(this.kind==='meetings'){const add=h.createEl('button',{text:'새 회의록',cls:'rd-new-meeting',attr:{type:'button','aria-haspopup':'dialog'}});add.onclick=()=>new MeetingCreateModal(this.dashboard.app,async title=>{await this.dashboard.newNote('Meetings',title);this.dashboard.refresh();}).open();this.setupCollapse(h,root,'meetings',!!saved.meetingsCollapsed);}
+    if(this.kind==='projects'){const add=h.createEl('button',{text:'+',cls:'rd-new-project-button',attr:{type:'button','aria-label':'연구 프로젝트 추가',title:'연구 프로젝트 추가','aria-haspopup':'dialog'}});add.onclick=()=>new MeetingCreateModal(this.dashboard.app,async title=>{this.projectPath=await this.dashboard.newNote('Projects',title);this.saveView();this.dashboard.refresh(this.projectPath);},'project').open();this.setupCollapse(h,root,'projects',!!saved.projectsCollapsed);}
+    if(this.kind==='meetings'){const add=h.createEl('button',{text:'새 회의록',cls:'rd-new-meeting',attr:{type:'button','aria-haspopup':'dialog'}});add.onclick=()=>new MeetingCreateModal(this.dashboard.app,async title=>{const path=await this.dashboard.newNote('Meetings',title);this.dashboard.refresh(path);}).open();this.setupCollapse(h,root,'meetings',!!saved.meetingsCollapsed);}
     this.register(this.dashboard.subscribe(this.kind,()=>void this.render()));void this.render();
     if(this.kind==='queue')this.registerInterval(window.setInterval(()=>void this.renderWorker(),5000));
   }
@@ -162,7 +162,7 @@ class ModuleView extends MarkdownRenderChild {
   private empty(text:string){this.body.createEl('p',{cls:'rd-empty',text});}
   private scheduleForm(heading:HTMLElement){
     const add=heading.createEl('button',{cls:'rd-schedule-add',text:'일정 추가',attr:{type:'button','aria-label':'회의 일정 추가','aria-haspopup':'dialog'}});
-    add.onclick=()=>new ScheduleEditor(this.dashboard.app,this.dashboard.records,undefined,this.dashboard.selectedDay||localDay(),async(title,day,time)=>{await this.dashboard.newSchedule(title,day,time);this.dashboard.refresh();},async record=>this.dashboard.openMeeting((await this.dashboard.records.minutes(record)).path),()=>this.dashboard.refresh()).open();
+    add.onclick=()=>new ScheduleEditor(this.dashboard.app,this.dashboard.records,undefined,this.dashboard.selectedDay||localDay(),async(title,day,time)=>{await this.dashboard.newSchedule(title,day,time);},async record=>this.dashboard.openMeeting((await this.dashboard.records.minutes(record)).path),()=>this.dashboard.refresh('Meetings/Schedule/')).open();
   }
   private async render(){const ticket=++this.ticket;try{const s=await this.dashboard.snapshot();if(!this.alive||ticket!==this.ticket)return;const count=this.containerEl.querySelector<HTMLElement>('.rd-card-count');if(count)count.textContent=String(this.kind==='queue'?s.pdfs.filter(f=>!s.pdfLinks[f.path]).length:this.kind==='papers'?s.papers.length:s.meetings.length);const previousScroll=this.body.scrollTop;this.graph3d?.destroy();this.graph3d=null;this.body.empty();
     if(this.kind==='tasks'){
@@ -185,7 +185,7 @@ class ModuleView extends MarkdownRenderChild {
         const done=fm?.completed===true,title=String(fm?.title||file.basename);
         const row=this.body.createDiv({cls:'rd-schedule-row'+(done?' is-done':'')}),main=row.createDiv({cls:'rd-schedule-main'});
         const edit=main.createEl('button',{text:title,cls:'rd-note-link',attr:{type:'button','aria-haspopup':'dialog','aria-label':title+' 일정 수정'}});
-        edit.onclick=()=>void this.act(async()=>{const record=await this.dashboard.records.read(file);new ScheduleEditor(this.dashboard.app,this.dashboard.records,record,record.day,async()=>{},async r=>this.dashboard.openMeeting((await this.dashboard.records.minutes(r)).path),()=>this.dashboard.refresh()).open();});
+        edit.onclick=()=>void this.act(async()=>{const record=await this.dashboard.records.read(file);new ScheduleEditor(this.dashboard.app,this.dashboard.records,record,record.day,async()=>{},async r=>this.dashboard.openMeeting((await this.dashboard.records.minutes(r)).path),()=>this.dashboard.refresh(file.path)).open();});
         const action=done?'완료 취소':'완료로 표시';
         const complete=main.createEl('button',{cls:'rd-schedule-complete',attr:{type:'button','aria-pressed':String(done),'aria-label':title+' '+action,title:action}});
         complete.createSpan({text:done?'✅':'○',attr:{'aria-hidden':'true'}});

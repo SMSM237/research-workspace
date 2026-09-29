@@ -13,6 +13,15 @@ test('adding a task updates task views without rebuilding the PDF queue or 3D gr
   assert.equal(shouldRefreshCard('queue','.figure-reports/dashboard-weather.json'),false);
 });
 
+test('schedule, minutes, and project changes refresh only their dependent cards',()=>{
+  const cards=['home','graph','tasks','weekly','projects','queue','calendar','schedules','meetings','papers'];
+  const affected=path=>cards.filter(kind=>shouldRefreshCard(kind,path));
+  assert.deepEqual(affected('Meetings/Schedule/new.md'),['tasks','weekly','calendar','schedules']);
+  assert.deepEqual(affected('Meetings/Minutes/new.md'),['home','tasks','weekly','calendar','schedules','meetings']);
+  assert.equal(shouldRefreshCard('queue','Projects/new.md'),false);
+  assert.equal(shouldRefreshCard('queue','Meetings/Minutes/new.md'),false);
+});
+
 test('PDF and report changes still update the pending list and graph',()=>{
   for(const path of ['Paper/new.pdf','Paper reports/new.md','Dashboard/pdf-links.json']){
     assert.equal(shouldRefreshCard('queue',path),true,path);

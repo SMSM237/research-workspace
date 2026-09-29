@@ -715,6 +715,8 @@ function shouldRefreshCard(kind, path) {
         return ['tasks', 'weekly', 'calendar'].includes(kind);
     if (path.startsWith('Projects/'))
         return ['tasks', 'weekly', 'calendar', 'projects', 'connections', 'home'].includes(kind);
+    if (path.startsWith('Meetings/Schedule/'))
+        return ['tasks', 'weekly', 'calendar', 'schedules'].includes(kind);
     if (path.startsWith('Meetings/'))
         return ['tasks', 'weekly', 'calendar', 'schedules', 'meetings', 'connections', 'home'].includes(kind);
     if (path.startsWith('Notes/'))
@@ -1632,12 +1634,12 @@ class ModuleView extends obsidian_1.MarkdownRenderChild {
             this.scheduleForm(h);
         if (this.kind === 'projects') {
             const add = h.createEl('button', { text: '+', cls: 'rd-new-project-button', attr: { type: 'button', 'aria-label': '연구 프로젝트 추가', title: '연구 프로젝트 추가', 'aria-haspopup': 'dialog' } });
-            add.onclick = () => new record_dialogs_1.MeetingCreateModal(this.dashboard.app, async (title) => { this.projectPath = await this.dashboard.newNote('Projects', title); this.saveView(); this.dashboard.refresh(); }, 'project').open();
+            add.onclick = () => new record_dialogs_1.MeetingCreateModal(this.dashboard.app, async (title) => { this.projectPath = await this.dashboard.newNote('Projects', title); this.saveView(); this.dashboard.refresh(this.projectPath); }, 'project').open();
             this.setupCollapse(h, root, 'projects', !!saved.projectsCollapsed);
         }
         if (this.kind === 'meetings') {
             const add = h.createEl('button', { text: '새 회의록', cls: 'rd-new-meeting', attr: { type: 'button', 'aria-haspopup': 'dialog' } });
-            add.onclick = () => new record_dialogs_1.MeetingCreateModal(this.dashboard.app, async (title) => { await this.dashboard.newNote('Meetings', title); this.dashboard.refresh(); }).open();
+            add.onclick = () => new record_dialogs_1.MeetingCreateModal(this.dashboard.app, async (title) => { const path = await this.dashboard.newNote('Meetings', title); this.dashboard.refresh(path); }).open();
             this.setupCollapse(h, root, 'meetings', !!saved.meetingsCollapsed);
         }
         this.register(this.dashboard.subscribe(this.kind, () => void this.render()));
@@ -1684,7 +1686,7 @@ class ModuleView extends obsidian_1.MarkdownRenderChild {
     empty(text) { this.body.createEl('p', { cls: 'rd-empty', text }); }
     scheduleForm(heading) {
         const add = heading.createEl('button', { cls: 'rd-schedule-add', text: '일정 추가', attr: { type: 'button', 'aria-label': '회의 일정 추가', 'aria-haspopup': 'dialog' } });
-        add.onclick = () => new record_dialogs_1.ScheduleEditor(this.dashboard.app, this.dashboard.records, undefined, this.dashboard.selectedDay || (0, dashboard_data_3.localDay)(), async (title, day, time) => { await this.dashboard.newSchedule(title, day, time); this.dashboard.refresh(); }, async (record) => this.dashboard.openMeeting((await this.dashboard.records.minutes(record)).path), () => this.dashboard.refresh()).open();
+        add.onclick = () => new record_dialogs_1.ScheduleEditor(this.dashboard.app, this.dashboard.records, undefined, this.dashboard.selectedDay || (0, dashboard_data_3.localDay)(), async (title, day, time) => { await this.dashboard.newSchedule(title, day, time); }, async (record) => this.dashboard.openMeeting((await this.dashboard.records.minutes(record)).path), () => this.dashboard.refresh('Meetings/Schedule/')).open();
     }
     async render() {
         const ticket = ++this.ticket;
@@ -1752,7 +1754,7 @@ class ModuleView extends obsidian_1.MarkdownRenderChild {
                     const done = fm?.completed === true, title = String(fm?.title || file.basename);
                     const row = this.body.createDiv({ cls: 'rd-schedule-row' + (done ? ' is-done' : '') }), main = row.createDiv({ cls: 'rd-schedule-main' });
                     const edit = main.createEl('button', { text: title, cls: 'rd-note-link', attr: { type: 'button', 'aria-haspopup': 'dialog', 'aria-label': title + ' 일정 수정' } });
-                    edit.onclick = () => void this.act(async () => { const record = await this.dashboard.records.read(file); new record_dialogs_1.ScheduleEditor(this.dashboard.app, this.dashboard.records, record, record.day, async () => { }, async (r) => this.dashboard.openMeeting((await this.dashboard.records.minutes(r)).path), () => this.dashboard.refresh()).open(); });
+                    edit.onclick = () => void this.act(async () => { const record = await this.dashboard.records.read(file); new record_dialogs_1.ScheduleEditor(this.dashboard.app, this.dashboard.records, record, record.day, async () => { }, async (r) => this.dashboard.openMeeting((await this.dashboard.records.minutes(r)).path), () => this.dashboard.refresh(file.path)).open(); });
                     const action = done ? '완료 취소' : '완료로 표시';
                     const complete = main.createEl('button', { cls: 'rd-schedule-complete', attr: { type: 'button', 'aria-pressed': String(done), 'aria-label': title + ' ' + action, title: action } });
                     complete.createSpan({ text: done ? '✅' : '○', attr: { 'aria-hidden': 'true' } });

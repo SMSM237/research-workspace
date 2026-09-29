@@ -5,6 +5,7 @@ export function shouldRefreshCard(kind:string,path:string):boolean {
   if(path.startsWith('.research-activity/'))return kind==='home';
   if(path.startsWith('Tasks/'))return ['tasks','weekly','calendar'].includes(kind);
   if(path.startsWith('Projects/'))return ['tasks','weekly','calendar','projects','connections','home'].includes(kind);
+  if(path.startsWith('Meetings/Schedule/'))return ['tasks','weekly','calendar','schedules'].includes(kind);
   if(path.startsWith('Meetings/'))return ['tasks','weekly','calendar','schedules','meetings','connections','home'].includes(kind);
   if(path.startsWith('Notes/'))return ['tasks','weekly','calendar','home'].includes(kind);
   if(path.startsWith('Paper reports/'))return ['papers','queue','graph','connections','home'].includes(kind);

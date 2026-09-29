@@ -6,7 +6,7 @@ Windows PC, Mac, Android에서 같은 연구 노트를 사용하기 위한 개�
 
 | 구성 | 버전 | 포함 내용 |
 |---|---|---|
-| 대시보드 / Figure First Reader | 0.7.8 | 개별 PDF 분석 버튼, 대기·완료 목록, 자동 회전하는 3D 그래프, PC·모바일 홈 |
+| 대시보드 / Figure First Reader | 0.7.9 | 일정·할 일·논문 카드별 독립 갱신, 개별 PDF 분석 버튼, 3D 그래프, PC·모바일 홈 |
 | 논문 분석 구성 | 2026.09.15 | PDF 대기열, 고정 Chat 프롬프트, Markdown 검사, Markdown/HTML 리포트, PC 요청 연결 |
 | Android 연구 위젯 | 0.3.4 | 4×2 가변 위젯 APK, Java 소스와 테스트 |
 
