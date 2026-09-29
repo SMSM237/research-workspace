@@ -1381,6 +1381,17 @@ class ResearchDashboard {
     async requestPdf(file) { const control = this.plugin.remoteControl; if (!control)
         throw Error('논문 분석 연결이 준비되지 않았습니다.'); await control.submitPdf(file); }
     async openAnalysisStatus() { await this.plugin.remoteControl?.open(); }
+    async openPaperFolder() {
+        if (!obsidian_1.Platform.isDesktopApp)
+            throw Error('로컬 원본 PDF 폴더는 PC에서 열 수 있습니다.');
+        const adapter = this.app.vault.adapter;
+        if (!(adapter instanceof obsidian_1.FileSystemAdapter))
+            throw Error('이 Vault의 로컬 폴더 경로를 확인할 수 없습니다.');
+        await this.ensureFolder('Paper');
+        const error = await require('electron').shell.openPath(adapter.getFullPath('Paper'));
+        if (error)
+            throw Error('원본 PDF 폴더를 열지 못했습니다: ' + error);
+    }
     async newSchedule(title, day, time) { if (!(0, dashboard_data_3.validDay)(day) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time))
         throw Error('회의 날짜와 시간을 입력해 주세요.'); const safe = title.trim().replace(/[<>:"/\\|?*\x00-\x1f]/g, ' ').replace(/[. ]+$/, '').slice(0, 90); if (!safe)
         throw Error('회의 제목을 입력해 주세요.'); await this.ensureFolder('Meetings/Schedule'); const path = `Meetings/Schedule/${day} ${time.replace(':', '')} ${safe}.md`; if (this.app.vault.getAbstractFileByPath(path))
@@ -1616,8 +1627,22 @@ class ModuleView extends obsidian_1.MarkdownRenderChild {
             heading.createSpan({ cls: 'rd-card-count', text: '0' });
         if (!['papers', 'queue', 'graph'].includes(this.kind))
             root.createEl('p', { text: meta[1], cls: 'rd-subtitle' });
-        else if (this.kind === 'queue')
+        else if (this.kind === 'queue') {
             h.createDiv({ cls: 'rd-paper-connection' });
+            if (obsidian_1.Platform.isDesktopApp) {
+                const folder = h.createEl('button', { cls: 'rd-queue-folder-button', attr: { type: 'button', 'aria-label': '원본 PDF 폴더 열기', title: 'Vault의 Paper 폴더를 파일 탐색기에서 열기' } });
+                (0, obsidian_1.setIcon)(folder, 'folder-open');
+                folder.onclick = async () => { folder.disabled = true; try {
+                    await this.dashboard.openPaperFolder();
+                }
+                catch (error) {
+                    new obsidian_1.Notice(error instanceof Error ? error.message : '원본 PDF 폴더를 열지 못했습니다.');
+                }
+                finally {
+                    folder.disabled = false;
+                } };
+            }
+        }
         this.error = root.createEl('p', { cls: 'rd-error', attr: { role: 'alert' } });
         this.error.hidden = true;
         this.body = root.createDiv({ cls: 'rd-body' });

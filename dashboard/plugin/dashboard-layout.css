@@ -42,6 +42,10 @@
 .rd-module[data-module=queue] .rd-module-heading,.rd-module[data-module=papers] .rd-module-heading{min-height:40px;align-items:center}
 .rd-module[data-module=queue] .rd-module-heading h2{white-space:nowrap}
 .rd-module[data-module=queue] .rd-paper-connection{margin-left:auto;min-width:0}
+.rd-module[data-module=queue] .rd-queue-folder-button{flex:0 0 40px;width:40px;height:40px;min-height:40px;padding:10px!important;border:0;border-radius:10px;background:transparent;box-shadow:none;color:var(--rc-muted)}
+.rd-module[data-module=queue] .rd-queue-folder-button svg{width:20px;height:20px}
+.rd-module[data-module=queue] .rd-queue-folder-button:hover{background:#e5f3ed;color:#155a45}
+.rd-module[data-module=queue] .rd-queue-folder-button:focus-visible{outline:2px solid var(--rc-green);outline-offset:-2px}
 .rd-module[data-module=queue] .rd-paper-stage{display:none}
 .rd-module[data-module=queue] .rd-body,.rd-module[data-module=papers] .rd-body{overflow:auto;min-height:0}
 .rd-module[data-module=queue] .rd-paper-row,.rd-module[data-module=papers] .rd-paper-row{gap:8px}

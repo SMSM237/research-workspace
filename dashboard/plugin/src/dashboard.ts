@@ -4,7 +4,7 @@ import {dailyVerse,millisUntilNextDay} from './daily-verse';
 import {planWeekStep,graphFiles,paperIndexText,personalFileCount} from './dashboard-data';
 import {TaskCelebration} from './task-celebration';
 import {completedToday} from './dashboard-data';
-import {App,Modal,ItemView,WorkspaceLeaf,MarkdownRenderChild,Notice,Platform,Plugin,TFile,setIcon} from 'obsidian';
+import {App,FileSystemAdapter,Modal,ItemView,WorkspaceLeaf,MarkdownRenderChild,Notice,Platform,Plugin,TFile,setIcon} from 'obsidian';
 import {Task,READING,ReadingState,localDay,parseTasks,readingState,setReading,toggleTask,weekCounts,weekDays,taskSource,validDay,dailyTasks,dailyCounts,newDailyTask,taskStart,monthWeeks,addPlanTask} from './dashboard-data';
 import {statusModel} from './status-data';
 import {DashboardRecords} from './dashboard-records';
@@ -13,6 +13,7 @@ import {ScheduleEditor,TaskEditor,MeetingCreateModal} from './record-dialogs';
 import {DashboardExtras} from './dashboard-extras';
 import {shouldRefreshCard} from './dashboard-refresh';
 import {WorkerJobs,workerRecord,workerModel} from './library';
+declare const require:(name:string)=>any;
 
 const DESKTOP='research-dashboard';
 const PC='Dashboard/연구 홈.canvas',MOBILE='Dashboard/모바일 홈.md';
@@ -51,6 +52,14 @@ export class ResearchDashboard {
   async pdfRequests(){return (this.plugin as any).remoteControl?.requests()||[];}
   async requestPdf(file:TFile){const control=(this.plugin as any).remoteControl;if(!control)throw Error('논문 분석 연결이 준비되지 않았습니다.');await control.submitPdf(file);}
   async openAnalysisStatus(){await (this.plugin as any).remoteControl?.open();}
+  async openPaperFolder(){
+    if(!Platform.isDesktopApp)throw Error('로컬 원본 PDF 폴더는 PC에서 열 수 있습니다.');
+    const adapter=this.app.vault.adapter;
+    if(!(adapter instanceof FileSystemAdapter))throw Error('이 Vault의 로컬 폴더 경로를 확인할 수 없습니다.');
+    await this.ensureFolder('Paper');
+    const error:string=await require('electron').shell.openPath(adapter.getFullPath('Paper'));
+    if(error)throw Error('원본 PDF 폴더를 열지 못했습니다: '+error);
+  }
   async newSchedule(title:string,day:string,time:string){if(!validDay(day)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(time))throw Error('회의 날짜와 시간을 입력해 주세요.');const safe=title.trim().replace(/[<>:"/\\|?*\x00-\x1f]/g,' ').replace(/[. ]+$/,'').slice(0,90);if(!safe)throw Error('회의 제목을 입력해 주세요.');await this.ensureFolder('Meetings/Schedule');const path=`Meetings/Schedule/${day} ${time.replace(':','')} ${safe}.md`;if(this.app.vault.getAbstractFileByPath(path))throw Error('같은 회의 일정이 있습니다.');await this.app.vault.create(path,`---\ntype: meeting_schedule\ndate: ${day}\ntime: "${time}"\ntitle: ${JSON.stringify(safe)}\n---\n# ${safe}\n\n## 관련 프로젝트·논문\n\n## 준비할 내용\n\n## 회의록\n\n`);this.cache=null;}
   async jobs(){try{const {value}=await workerRecord(this.app,true);if(!value)return [];if(value.version!==1||!Array.isArray(value.jobs))throw Error();return value.jobs;}catch{throw Error('분석 작업 기록을 읽지 못했습니다.');}}
   subscribe(kind:string,fn:()=>void){const listener={kind,fn};this.listeners.add(listener);return ()=>this.listeners.delete(listener);}
@@ -136,7 +145,7 @@ class ModuleView extends MarkdownRenderChild {
   onload(){this.alive=true;const saved=this.dashboard.app.loadLocalStorage('research-dashboard-view')||{};if(typeof saved.project==='string')this.projectPath=saved.project;const root=this.containerEl;root.empty();root.classList.add('rd-module');root.dataset.module=this.kind;
     if(this.kind==='home'){root.classList.add('rd-home');this.error=root.createEl('p',{cls:'rd-error',attr:{role:'alert'}});this.error.hidden=true;this.body=root.createDiv({cls:'rd-home-content'});this.register(this.dashboard.subscribe(this.kind,()=>void this.renderHome()));void this.renderHome();this.registerInterval(window.setInterval(()=>void this.renderHome(),1800000));let midnight=0;const nextDay=()=>{window.clearTimeout(midnight);midnight=window.setTimeout(()=>{if(!this.alive)return;void this.renderHome();nextDay();},millisUntilNextDay());};nextDay();this.register(()=>window.clearTimeout(midnight));this.registerDomEvent(document,'visibilitychange',()=>{if(!document.hidden){void this.renderHome();nextDay();}});this.registerDomEvent(window,'focus',()=>{void this.renderHome();nextDay();});return;}
     const meta=MODULES[this.kind];if(!meta){root.createEl('p',{text:'알 수 없는 모듈입니다. 원본 노트의 모듈 이름을 확인해 주세요.'});return;}
-     const h=root.createDiv({cls:'rd-module-heading'});const icon=h.createSpan({cls:'rd-icon',attr:{'aria-hidden':'true'}});setIcon(icon,meta[2]);const heading=h.createEl('h2');if(this.kind==='papers'){const open=heading.createEl('button',{cls:'rd-library-open',text:meta[0],attr:{type:'button','aria-label':'분석된 논문 목록 열기',title:'왼쪽 사이드바에서 논문 보관함 열기'}});open.onclick=()=>void this.act(()=>this.dashboard.openLibrary());}else heading.textContent=meta[0];if(['queue','papers','meetings'].includes(this.kind))heading.createSpan({cls:'rd-card-count',text:'0'});if(!['papers','queue','graph'].includes(this.kind))root.createEl('p',{text:meta[1],cls:'rd-subtitle'});else if(this.kind==='queue')h.createDiv({cls:'rd-paper-connection'});
+     const h=root.createDiv({cls:'rd-module-heading'});const icon=h.createSpan({cls:'rd-icon',attr:{'aria-hidden':'true'}});setIcon(icon,meta[2]);const heading=h.createEl('h2');if(this.kind==='papers'){const open=heading.createEl('button',{cls:'rd-library-open',text:meta[0],attr:{type:'button','aria-label':'분석된 논문 목록 열기',title:'왼쪽 사이드바에서 논문 보관함 열기'}});open.onclick=()=>void this.act(()=>this.dashboard.openLibrary());}else heading.textContent=meta[0];if(['queue','papers','meetings'].includes(this.kind))heading.createSpan({cls:'rd-card-count',text:'0'});if(!['papers','queue','graph'].includes(this.kind))root.createEl('p',{text:meta[1],cls:'rd-subtitle'});else if(this.kind==='queue'){h.createDiv({cls:'rd-paper-connection'});if(Platform.isDesktopApp){const folder=h.createEl('button',{cls:'rd-queue-folder-button',attr:{type:'button','aria-label':'원본 PDF 폴더 열기',title:'Vault의 Paper 폴더를 파일 탐색기에서 열기'}});setIcon(folder,'folder-open');folder.onclick=async()=>{folder.disabled=true;try{await this.dashboard.openPaperFolder();}catch(error){new Notice(error instanceof Error?error.message:'원본 PDF 폴더를 열지 못했습니다.');}finally{folder.disabled=false;}};}}
     this.error=root.createEl('p',{cls:'rd-error',attr:{role:'alert'}});this.error.hidden=true;
     this.body=root.createDiv({cls:'rd-body'});this.body.createEl('p',{text:'기록을 불러오고 있습니다.',cls:'rd-empty'});
     if(this.kind==='tasks'){h.createSpan({cls:'rd-task-day'});const today=this.button(h,'↩',async()=>this.dashboard.selectDay(''));today.classList.add('rd-task-today');today.setAttribute('aria-label','오늘 할 일로 돌아가기');today.title='오늘 할 일로 돌아가기';this.taskForm(root);}if(this.kind==='schedules')this.scheduleForm(h);
