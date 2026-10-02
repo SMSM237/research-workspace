@@ -69,6 +69,14 @@ def test_loose_pdfs_are_stable_queued_once_in_order_and_keep_originals(tmp_path)
     restarted=LocalWorker(w.vault,w.state,stable_seconds=2)
     restarted.scan_inbox(0);assert restarted.scan_inbox(2)==[] and len(restarted.queue.list())==2
 
+
+def test_button_only_mode_does_not_enqueue_inbox_pdf(tmp_path):
+    w=worker(tmp_path);pdf(w.vault/'Inbox'/'unrequested.pdf')
+    (w.state/'button-only.json').write_text('{"version":1}',encoding='utf-8')
+    w.tick()
+    assert w.queue.list()==[]
+    assert w.status['stage']=='waiting'
+
 def test_changed_loose_pdf_waits_again_until_copy_stops(tmp_path):
     w=worker(tmp_path);path=pdf(w.vault/'Inbox'/'copy.pdf')
     assert w.scan_inbox(0)==[]

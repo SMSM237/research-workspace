@@ -28,6 +28,10 @@ export class RemoteReceiver {
       }
       requests.sort((a,b)=>a.createdAt.localeCompare(b.createdAt));
       const r=requests[0];if(!r)return;
+      if(r.version===1&&r.action==='analyze-inbox'){
+        ledger[r.id]=statusFor(r,'cancelled','이전 일괄 분석 요청은 실행하지 않습니다. Paper 보관함에서 분석할 PDF 한 편을 선택해 주세요.');
+        await this.store.writeLedger(ledger);await this.store.writeStatus(ledger[r.id]);return;
+      }
       if(Date.now()-Date.parse(r.createdAt)>7*86400000){
         ledger[r.id]=statusFor(r,'cancelled','7일 이상 지난 요청입니다. 오래된 작업의 자동 실행을 취소했습니다.');
         await this.store.writeLedger(ledger);await this.store.writeStatus(ledger[r.id]);return;
@@ -39,8 +43,9 @@ export class RemoteReceiver {
         if(!UUID.test(messageId))throw Error('요청 접수 번호를 받지 못했습니다.');
         const fresh=await this.store.readLedger();
         ledger[r.id]=fresh[r.id]&&fresh[r.id].state!=='dispatching'?fresh[r.id]:{...statusFor(r,'queued','Codex가 요청을 접수했습니다. 실제 작업 시작을 기다립니다.'),queueMessageId:messageId};
-      } catch {
-        ledger[r.id]=statusFor(r,'blocked','Codex 전달 결과를 확인하지 못했습니다. PC에서 확인해야 하며 자동 재전송하지 않습니다.');
+      } catch(error) {
+        const cause=error instanceof Error?error.message:'Codex 연결을 확인해 주세요.';
+        ledger[r.id]=statusFor(r,'blocked',cause.slice(0,700)+' 자동으로 중복 분석하지 않습니다.');
       }
       await this.store.writeLedger(ledger);await this.store.writeStatus(ledger[r.id]);
     } finally {this.busy=false;}

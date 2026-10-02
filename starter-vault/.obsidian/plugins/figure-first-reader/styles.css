@@ -361,7 +361,7 @@ with others.
 
 The OFL allows the licensed fonts to be used, studied, modified and
 redistributed freely as long as they are not sold by themselves. The
-fonts, including any derivative works, can be bundled, embedded, 
+fonts, including any derivative works, can be bundled, embedded,
 redistributed and/or sold with any software provided that any reserved
 names are not used by derivative works. The fonts and derivatives,
 however, cannot be released under any other type of license. The
@@ -802,6 +802,7 @@ body.is-mobile .workspace-leaf-content[data-type="paper-analysis-control"] .view
 @media(forced-colors:active){.rd-graph3d{border:2px solid CanvasText}}
 
 /* The fixed top pair is independent from the three-column work area. */
+.rd-desktop{padding-bottom:48px!important;scroll-padding-bottom:48px}
 .rd-desktop-grid{
   grid-template-areas:'top top top' 'tasks weekly schedules' 'tasks projects meetings' 'tasks projects meetings' 'calendar queue papers';
   grid-template-rows:230px minmax(235px,1fr) minmax(110px,.7fr) minmax(110px,.7fr) 350px;

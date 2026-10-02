@@ -17,6 +17,7 @@ test('one queue send across repeated polls and receiver restart; no false runnin
 test('ambiguous failure is retained and never retried automatically',async()=>{const f=fixture();f.outcome=new Error('timeout');await f.receiver().tick();await f.receiver().tick();assert.equal(f.sends,1);assert.equal(f.ledger[id].state,'blocked');});
 test('crash after intent cannot duplicate a submission',async()=>{const f=fixture();await f.store.writeLedger({[id]:d.statusFor(req(),'dispatching','test')});await f.receiver().tick();assert.equal(f.sends,0);assert.equal(f.ledger[id].state,'blocked');});
 test('expired requests never run',async()=>{const f=fixture({...req(),createdAt:'2020-01-01T00:00:00Z'});await f.receiver().tick();assert.equal(f.sends,0);assert.equal(f.ledger[id].state,'cancelled');});
+test('legacy batch requests cannot revive the cleared Inbox queue',async()=>{const f=fixture({...req(),action:'analyze-inbox',maxPapers:10});await f.receiver().tick();assert.equal(f.sends,0);assert.equal(f.ledger[id].state,'cancelled');});
 test('same receiver serializes concurrent notifications',async()=>{const f=fixture(),r=f.receiver();await Promise.all([r.tick(),r.tick()]);assert.equal(f.sends,1);});
 test('diagnostic prompt forbids analysis and requires request validation',()=>{assert.match(d.queuePrompt(id,true,'RUN.md'),/분석·업로드·게시를 시작하지/);assert.throws(()=>d.queuePrompt('x;calc',false,'RUN.md'));});
 test('one PDF request binds a safe path and SHA, excluding other papers',()=>{

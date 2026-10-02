@@ -4,7 +4,7 @@ No browser automation, model calls, or credential access occur in this module.
 """
 from pathlib import Path
 import argparse,json,time
-from .worker_queue import JobQueue,WorkerLock
+from .worker_queue import JobQueue,WorkerLock,digest
 from .build import atomic_write
 
 class ChatCoordinator:
@@ -13,12 +13,35 @@ class ChatCoordinator:
     def read(self):
         return json.loads(self.path.read_text('utf-8')) if self.path.exists() else {'active':None,'jobs':{}}
     def save(self,data):atomic_write(self.path,json.dumps(data,ensure_ascii=False,indent=2).encode())
+    def authorized(self, job):
+        # The local bridge ledger proves that a button request reached Codex.
+        try:
+            ledger=json.loads((self.root.parent/'mobile-control-ledger.json').read_text('utf-8'))
+            config=json.loads((self.root.parent/'config.json').read_text('utf-8'))
+            vault=Path(config['vault']).resolve()
+            for rid, entry in ledger.items():
+                if entry.get('state') not in {'queued','waiting','running','review','publishing'} or not entry.get('queueMessageId'):
+                    continue
+                req=json.loads((vault/'.paper-control/requests'/f'{rid}.json').read_text('utf-8'))
+                if set(req)!={'version','id','action','createdAt','path','sha256'} or req.get('version')!=2 or req.get('id')!=rid or req.get('action')!='analyze-pdf':
+                    continue
+                rel=req.get('path')
+                if not isinstance(rel,str) or not rel.startswith('Paper/') or any(part in ('','.','..') for part in rel.split('/')):
+                    continue
+                path=(vault/rel).resolve()
+                sha=req.get('sha256')
+                if (path.is_relative_to(vault/'Paper') and path.is_file() and sha==job.get('source_hashes',[None])[0]
+                        and digest(path)==sha):
+                    return True
+        except (OSError,ValueError,KeyError,TypeError,IndexError):
+            return False
+        return False
     def peek(self):
         data=self.read();jobs=self.queue.list();active=data.get('active')
         if active:
             record=data['jobs'][active['job_id']]
             return dict(status='waiting' if record.get('retry_at',0)>time.time() else 'resume',active=active,record=record)
-        candidates=[j for j in jobs if j['state'] in {'queued','prepared','review','interrupted'} and data['jobs'].get(j['id'],{}).get('retry_at',0)<=time.time()]
+        candidates=[j for j in jobs if j['state'] in {'queued','prepared','review','interrupted'} and self.authorized(j) and data['jobs'].get(j['id'],{}).get('retry_at',0)<=time.time()]
         return dict(status='ready' if candidates else 'idle',count=len(candidates),next_job={k:candidates[0].get(k) for k in ['id','report_id','state','folder','bundle','source_names']} if candidates else None)
     def claim(self,owner,now=None):
         now=time.time() if now is None else now;lock=WorkerLock(self.root/'chat-coordinator.lock');lock.acquire()
@@ -29,7 +52,7 @@ class ChatCoordinator:
                 if active['owner']!=owner and active['lease_until']>now:return dict(status='busy')
                 jid=active['job_id'];record=data['jobs'][jid]
             else:
-                candidates=[j for j in self.queue.list() if j['state'] in {'queued','prepared','review','interrupted'} and data['jobs'].get(j['id'],{}).get('retry_at',0)<=now]
+                candidates=[j for j in self.queue.list() if j['state'] in {'queued','prepared','review','interrupted'} and self.authorized(j) and data['jobs'].get(j['id'],{}).get('retry_at',0)<=now]
                 if not candidates:return dict(status='idle')
                 jid=candidates[0]['id'];record=data['jobs'].setdefault(jid,dict(phase='prepare',chat_url=None))
             data['active']=dict(job_id=jid,owner=owner,lease_until=now+2700);self.save(data)

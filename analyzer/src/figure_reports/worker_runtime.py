@@ -220,6 +220,10 @@ class LocalWorker:
         return result
 
     def tick(self):
+        if (self.state / 'button-only.json').exists():
+            self.inbox_pending, self.inbox_errors = 0, []
+            self.set_status(stage='waiting', message='분석 버튼으로 선택한 논문만 실행 대기 중')
+            return
         self.scan_inbox()
         command_dir = self.control / 'commands'
         if command_dir.exists():

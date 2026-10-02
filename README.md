@@ -6,14 +6,14 @@ Windows PC, Mac, Android에서 같은 연구 노트를 사용하기 위한 개�
 
 | 구성 | 버전 | 포함 내용 |
 |---|---|---|
-| 대시보드 / Figure First Reader | 0.7.10 | 분석 대기 카드에서 원본 PDF 폴더 열기, 카드별 독립 갱신, 개별 PDF 분석 버튼, 3D 그래프, PC·모바일 홈 |
+| 대시보드 / Figure First Reader | 0.7.11 | 분석 대기 카드에서 원본 PDF 폴더 열기, 카드별 독립 갱신, 개별 PDF 분석 버튼, 3D 그래프, PC·모바일 홈 |
 | 논문 분석 구성 | 2026.09.15 | PDF 대기열, 고정 Chat 프롬프트, Markdown 검사, Markdown/HTML 리포트, PC 요청 연결 |
-| Android 연구 위젯 | 0.3.4 | 4×2 가변 위젯 APK, Java 소스와 테스트 |
+| Android 연구 위젯 | 0.3.5 | 4×2 가변 위젯 APK, Java 소스와 테스트 |
 
 ## 다운로드와 시작
 
-- [전체 패키지 ZIP](https://github.com/SMSM237/research-workspace/releases/latest): 처음 설치하는 경우 선택하세요.
-- [Android APK](downloads/Research-Widget-0.3.4.apk): 기존 앱을 업데이트하거나 위젯만 설치할 때 사용합니다.
+- [최신 소스·설치 구성 ZIP](https://github.com/SMSM237/research-workspace/archive/refs/heads/main.zip): 처음 설치하는 경우 선택하세요.
+- [Android APK](downloads/Research-Widget-0.3.5.apk): 기존 앱을 업데이트하거나 위젯만 설치할 때 사용합니다.
 - [대시보드 설정](dashboard/README.md) · [논문 분석기 설정](analyzer/README.md) · [위젯 설정](widget/README.md)
 
 1. 패키지에서 **starter-vault 전체 폴더**를 개인 작업 위치에 복사하세요. 숨김 폴더 `.obsidian`도 포함해야 합니다.
@@ -40,7 +40,7 @@ Windows/Mac은 [Obsidian Git](https://github.com/Vinzent03/obsidian-git), Androi
 
 논문 분석은 ChatGPT 구독 로그인과 PC에서의 Chat 조작이 필요합니다. Python이 분석 내용을 만들어 내는 것은 아닙니다. 모델 사용량 제한, 로그인, 다운로드, 생성 이미지 누락 및 Codex queue 지원 여부에 따라 확인이 필요할 수 있습니다. **무인 분석 전체 과정이 모든 환경에서 자동 완료된다는 보장은 없습니다.**
 
-위젯 버튼의 체크 효과는 요청 전달 피드백입니다. Git push나 논문 분석의 최종 완료와 구별됩니다. Inbox는 기본적으로 Git에서 제외되므로 분석할 PDF는 분석 PC의 Inbox에 준비하세요.
+위젯 버튼의 체크 효과는 요청 전달 피드백입니다. Git push나 논문 분석의 최종 완료와 구별됩니다. 원본 PDF는 Git으로 동기화되는 `Paper/`에 보관하고, 보관함에서 원하는 PDF의 개별 분석 버튼을 누르세요. 파일을 넣는 것만으로 분석하지 않습니다.
 
 ## 검증과 공개 범위
 

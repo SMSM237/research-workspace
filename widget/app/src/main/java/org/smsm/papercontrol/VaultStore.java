@@ -55,8 +55,7 @@ public final class VaultStore {
       if(status!=null){JSONObject s=new JSONObject(readUri(status));if(!id.equals(s.optString("id")))throw new IOException("실행 상태 ID를 확인해 주세요.");phase=s.optString("state","pending");}
       if(!terminal.contains(phase))return id;
     }
-    String id=UUID.randomUUID().toString();JSONObject r=new JSONObject().put("version",1).put("id",id).put("action","analyze-inbox").put("createdAt",Instant.now().toString()).put("maxPapers",10);
-    writeNew(".paper-control/requests/"+id+".json",r.toString(2));prefs(context).edit().putString("notice","분석 요청 저장 · 동기화 전").apply();return id;
+    throw new IOException("Paper 보관함에서 분석할 PDF 한 편을 선택해 주세요.");
   }}
   public String analysisState(){try{JSONObject latest=null;for(String n:names(".paper-control/requests")){if(!n.matches("[a-f0-9-]{36}\\.json"))continue;JSONObject r=new JSONObject(read(".paper-control/requests/"+n));if(latest==null||r.optString("createdAt").compareTo(latest.optString("createdAt"))>0)latest=r;}if(latest==null)return "분석 요청 없음";String id=latest.optString("id");if(!id.matches("[a-f0-9-]{36}"))return "상태 확인 필요";Uri uri=resolve(".paper-control/status/"+id+".json",false,false);if(uri==null)return "PC 접수 대기";JSONObject s=new JSONObject(readUri(uri));if(!id.equals(s.optString("id")))return "상태 확인 필요";switch(s.optString("state")){case "queued":return "Codex 실행 대기";case "running":return "분석 중";case "complete":return "Git 게시 완료";case "verified":return "연결 확인 완료";case "empty":return "새 논문 없음";case "blocked":return "분석 조치 필요";case "waiting":return "분석 확인 대기";default:return "분석 요청 대기";}}catch(Exception e){return "분석 상태 확인 필요";}}
   public void addMeeting(String title,String day,String time,String id)throws Exception{synchronized(WRITE_LOCK){

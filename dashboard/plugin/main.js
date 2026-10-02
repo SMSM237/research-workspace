@@ -67,7 +67,7 @@ function relationPositions(nodes, groups, width) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PaperGraph3D = void 0;
 const palette = ['#82c7bd', '#e2bc7e', '#d99b95', '#a8bc8d', '#aaa4cb', '#b7c8db', '#d4acbb', '#aec6a3'];
-/** Perspective projection, with redraw only after interaction or resize. */
+/** Static sphere geometry; only the camera projection changes during rotation. */
 class PaperGraph3D {
     constructor(host, items, links, open) {
         this.host = host;
@@ -80,6 +80,12 @@ class PaperGraph3D {
         this.zoom = 1;
         this.panX = 0;
         this.panY = 0;
+        this.ordered = [];
+        this.edges = [];
+        this.ctx = null;
+        this.width = 1;
+        this.height = 1;
+        this.dpr = 1;
         this.start = null;
         this.lastX = 0;
         this.lastY = 0;
@@ -202,71 +208,82 @@ class PaperGraph3D {
         this.velocityYaw = this.targetYaw = Math.cos(this.direction) * .00075;
         this.velocityPitch = this.targetPitch = Math.sin(this.direction) * .00075;
         this.nextTurn = performance.now() + 7500;
-        this.observer = new ResizeObserver(() => this.draw());
+        this.ctx = this.canvas.getContext('2d');
+        this.prepareGeometry();
+        this.observer = new ResizeObserver(() => this.resize());
         this.observer.observe(host);
-        this.draw();
+        this.resize();
         this.frame = requestAnimationFrame(this.animate);
     }
     destroy() { this.disposed = true; cancelAnimationFrame(this.frame); this.observer.disconnect(); this.canvas.removeEventListener('wheel', this.wheel); this.canvas.removeEventListener('pointerdown', this.down); this.canvas.removeEventListener('pointermove', this.move); this.canvas.removeEventListener('pointerup', this.up); this.canvas.removeEventListener('pointercancel', this.cancel); this.canvas.removeEventListener('pointerleave', this.leave); this.canvas.removeEventListener('contextmenu', this.contextMenu); this.canvas.removeEventListener('keydown', this.key); this.host.empty(); }
     schedule() { if (this.scheduled || this.disposed)
         return; this.scheduled = true; requestAnimationFrame(() => { this.scheduled = false; this.draw(); }); }
+    resize() { if (this.disposed)
+        return; const rect = this.host.getBoundingClientRect(); this.width = Math.max(1, Math.floor(rect.width)); this.height = Math.max(1, Math.floor(rect.height)); this.dpr = Math.min(2, devicePixelRatio || 1); const w = Math.round(this.width * this.dpr), h = Math.round(this.height * this.dpr); if (this.canvas.width !== w || this.canvas.height !== h) {
+        this.canvas.width = w;
+        this.canvas.height = h;
+    } this.draw(); }
+    prepareGeometry() {
+        const groups = [...new Set(this.items.map(i => i.group))].sort(), counts = new Map(), seen = new Map();
+        for (const item of this.items)
+            counts.set(item.group, (counts.get(item.group) || 0) + 1);
+        const centers = new Map(groups.map((g, j) => { const y = 1 - 2 * (j + .5) / groups.length, a = j * 2.399963229728653, r = Math.sqrt(1 - y * y); return [g, { x: Math.cos(a) * r, y, z: Math.sin(a) * r }]; }));
+        this.points = this.items.map(item => {
+            const ix = seen.get(item.group) || 0;
+            seen.set(item.group, ix + 1);
+            const center = centers.get(item.group), a = ix * 2.399963229728653, cap = Math.min(.7, .19 + Math.sqrt((counts.get(item.group) || 1) / this.items.length) * .55), r = cap * Math.sqrt((ix + .5) / (counts.get(item.group) || 1));
+            const ref = Math.abs(center.y) > .9 ? { x: 1, y: 0, z: 0 } : { x: 0, y: 1, z: 0 };
+            const ux = ref.y * center.z - ref.z * center.y, uy = ref.z * center.x - ref.x * center.z, uz = ref.x * center.y - ref.y * center.x, ul = Math.hypot(ux, uy, uz), vx = center.y * uz - center.z * uy, vy = center.z * ux - center.x * uz, vz = center.x * uy - center.y * ux;
+            const tx = ux / ul * Math.cos(a) + vx / ul * Math.sin(a), ty = uy / ul * Math.cos(a) + vy / ul * Math.sin(a), tz = uz / ul * Math.cos(a) + vz / ul * Math.sin(a), normal = Math.hypot(center.x + r * tx, center.y + r * ty, center.z + r * tz);
+            return { item, x: (center.x + r * tx) / normal, y: (center.y + r * ty) / normal, z: (center.z + r * tz) / normal, depth: 0, px: 0, py: 0, r: 0, color: palette[groups.indexOf(item.group) % palette.length] };
+        });
+        this.ordered = [...this.points];
+        const byId = new Map(this.points.map(p => [p.item.id, p]));
+        this.edges = [];
+        for (const link of this.links) {
+            const a = byId.get(link.from), b = byId.get(link.to);
+            if (a && b)
+                this.edges.push({ a, b, kind: link.kind });
+        }
+    }
     pause() { this.resumeAt = performance.now() + 4500; }
-    hit(x, y) { const rect = this.canvas.getBoundingClientRect(), px = x - rect.left, py = y - rect.top; return this.points.filter(p => Math.hypot(p.px - px, p.py - py) <= Math.max(13, p.r + 6)).sort((a, b) => b.z - a.z)[0]; }
+    hit(x, y) { const rect = this.canvas.getBoundingClientRect(), px = x - rect.left, py = y - rect.top; return this.points.filter(p => Math.hypot(p.px - px, p.py - py) <= Math.max(13, p.r + 6)).sort((a, b) => b.depth - a.depth)[0]; }
     hover(x, y) { const p = this.hit(x, y); if (!p) {
         this.tip.hidden = true;
         this.canvas.style.cursor = 'grab';
         return;
     } const rect = this.canvas.getBoundingClientRect(); this.tip.textContent = `${p.item.kind === 'pdf' ? 'PDF' : '리포트'} · ${p.item.group} · ${p.item.label}`; this.tip.hidden = false; this.tip.style.left = Math.max(10, Math.min(rect.width - this.tip.offsetWidth - 10, x - rect.left + 12)) + 'px'; this.tip.style.top = Math.max(10, Math.min(rect.height - this.tip.offsetHeight - 8, y - rect.top - 34)) + 'px'; this.canvas.style.cursor = 'pointer'; }
     draw() {
-        if (this.disposed)
+        if (this.disposed || !this.ctx)
             return;
-        const rect = this.host.getBoundingClientRect(), w = Math.max(1, Math.floor(rect.width)), h = Math.max(1, Math.floor(rect.height)), dpr = Math.min(2, devicePixelRatio || 1);
-        const pixelWidth = Math.round(w * dpr), pixelHeight = Math.round(h * dpr);
-        if (this.canvas.width !== pixelWidth || this.canvas.height !== pixelHeight) {
-            this.canvas.width = pixelWidth;
-            this.canvas.height = pixelHeight;
-        }
-        const ctx = this.canvas.getContext('2d');
-        if (!ctx)
-            return;
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        const ctx = this.ctx, w = this.width, h = this.height;
+        ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
         ctx.clearRect(0, 0, w, h);
         ctx.fillStyle = '#23332f';
         ctx.fillRect(0, 0, w, h);
-        const groups = [...new Set(this.items.map(i => i.group))].sort(), groupCounts = new Map();
-        const counts = new Map(groups.map(g => [g, this.items.filter(i => i.group === g).length]));
-        const centers = new Map(groups.map((g, j) => { const y = 1 - 2 * (j + .5) / groups.length, a = j * 2.399963229728653, r = Math.sqrt(1 - y * y); return [g, { x: Math.cos(a) * r, y, z: Math.sin(a) * r }]; }));
-        const scale = Math.min(w, h) * .46 * this.zoom;
-        const project = (item) => {
-            const ix = groupCounts.get(item.group) || 0;
-            groupCounts.set(item.group, ix + 1);
-            const center = centers.get(item.group), a = ix * 2.399963229728653, cap = Math.min(.7, .19 + Math.sqrt((counts.get(item.group) || 1) / this.items.length) * .55), r = cap * Math.sqrt((ix + .5) / (counts.get(item.group) || 1));
-            const ref = Math.abs(center.y) > .9 ? { x: 1, y: 0, z: 0 } : { x: 0, y: 1, z: 0 };
-            const ux = ref.y * center.z - ref.z * center.y, uy = ref.z * center.x - ref.x * center.z, uz = ref.x * center.y - ref.y * center.x, ul = Math.hypot(ux, uy, uz), vx = center.y * uz - center.z * uy, vy = center.z * ux - center.x * uz, vz = center.x * uy - center.y * ux;
-            const tx = ux / ul * Math.cos(a) + vx / ul * Math.sin(a), ty = uy / ul * Math.cos(a) + vy / ul * Math.sin(a), tz = uz / ul * Math.cos(a) + vz / ul * Math.sin(a), normal = Math.hypot(center.x + r * tx, center.y + r * ty, center.z + r * tz), x = (center.x + r * tx) / normal, y = (center.y + r * ty) / normal, z = (center.z + r * tz) / normal;
-            const cx = Math.cos(this.yaw), sx = Math.sin(this.yaw), cy = Math.cos(this.pitch), sy = Math.sin(this.pitch), xx = x * cx - z * sx, zz = x * sx + z * cx, yy = y * cy - zz * sy, depth = y * sy + zz * cy, perspective = 2.5 / (2.9 - depth);
-            return { item, x, y, z: depth, px: w * .5 + this.panX + xx * scale * perspective, py: h * .5 + this.panY + yy * scale * perspective, r: (item.kind === 'report' ? 5.5 : 3.6) * perspective };
-        };
-        this.points = this.items.map(project);
-        const byId = new Map(this.points.map(p => [p.item.id, p]));
-        for (const edge of this.links) {
-            const a = byId.get(edge.from), b = byId.get(edge.to);
-            if (!a || !b)
-                continue;
+        const scale = Math.min(w, h) * .46 * this.zoom, cx = Math.cos(this.yaw), sx = Math.sin(this.yaw), cy = Math.cos(this.pitch), sy = Math.sin(this.pitch);
+        for (const p of this.points) {
+            const xx = p.x * cx - p.z * sx, zz = p.x * sx + p.z * cx, yy = p.y * cy - zz * sy;
+            p.depth = p.y * sy + zz * cy;
+            const perspective = 2.5 / (2.9 - p.depth);
+            p.px = w * .5 + this.panX + xx * scale * perspective;
+            p.py = h * .5 + this.panY + yy * scale * perspective;
+            p.r = (p.item.kind === 'report' ? 5.5 : 3.6) * perspective;
+        }
+        for (const { a, b, kind } of this.edges) {
             ctx.beginPath();
             ctx.moveTo(a.px, a.py);
             ctx.lineTo(b.px, b.py);
-            ctx.strokeStyle = edge.kind === 'source' ? 'rgba(226,188,126,.38)' : 'rgba(178,202,190,.2)';
-            ctx.lineWidth = edge.kind === 'source' ? 1.2 : .8;
+            ctx.strokeStyle = kind === 'source' ? 'rgba(226,188,126,.38)' : 'rgba(178,202,190,.2)';
+            ctx.lineWidth = kind === 'source' ? 1.2 : .8;
             ctx.stroke();
         }
-        const ordered = [...this.points].sort((a, b) => a.z - b.z);
-        for (const p of ordered) {
-            const idx = groups.indexOf(p.item.group), color = palette[idx % palette.length];
+        this.ordered.sort((a, b) => a.depth - b.depth);
+        for (const p of this.ordered) {
             ctx.beginPath();
             ctx.arc(p.px, p.py, Math.max(2.2, p.r), 0, Math.PI * 2);
-            ctx.fillStyle = color;
-            ctx.globalAlpha = Math.max(.48, Math.min(1, .7 + p.z * .2));
+            ctx.fillStyle = p.color;
+            ctx.globalAlpha = Math.max(.48, Math.min(1, .7 + p.depth * .2));
             ctx.fill();
             ctx.globalAlpha = 1;
             if (p.item.kind === 'pdf') {
@@ -1438,7 +1455,10 @@ class ResearchDashboard {
         const existing = this.app.workspace.getLeavesOfType(file.extension === 'canvas' ? 'canvas' : 'markdown').find(l => l.getRoot() === this.app.workspace.rootSplit && l.view.file?.path === path);
         const leaf = existing || this.app.workspace.getLeaf('tab');
         await leaf.openFile(file, { state: { mode: 'preview' } });
+        await this.app.workspace.revealLeaf(leaf);
         this.app.workspace.setActiveLeaf(leaf, { focus: true });
+        if (path.startsWith('Paper reports/'))
+            this.app.workspace.getLeavesOfType('markdown').filter(l => l !== leaf && l.getRoot() === this.app.workspace.rightSplit && l.view.file?.path === path).forEach(l => l.detach());
     }
     async openMeeting(path) {
         const file = this.app.vault.getAbstractFileByPath(path);
@@ -1698,7 +1718,7 @@ class ModuleView extends obsidian_1.MarkdownRenderChild {
         (0, obsidian_1.setIcon)(i, icon);
         b.prepend(i);
     } b.onclick = () => void this.act(fn); return b; }
-    link(parent, file, label = file.basename) { const b = parent.createEl('button', { cls: 'rd-note-link', text: label, attr: { type: 'button' } }); b.title = label; b.onclick = () => void this.act(() => this.dashboard.open(file.path)); return b; }
+    link(parent, file, label = file.basename, newTab = true) { const b = parent.createEl('button', { cls: 'rd-note-link', text: label, attr: { type: 'button' } }); b.title = label; b.onclick = () => void this.act(() => this.dashboard.open(file.path, newTab)); return b; }
     taskForm(root) { const f = root.createEl('form', { cls: 'rd-add-task rd-simple-task' }); const title = f.createEl('input', { type: 'text', placeholder: '할 일을 적고 Enter', attr: { 'aria-label': '새 할 일', maxlength: '500', required: 'true' } }); const submit = f.createEl('button', { text: '추가', type: 'submit' }); f.onsubmit = e => { e.preventDefault(); if (!title.value.trim())
         return; submit.disabled = true; void this.act(async () => { await this.dashboard.append('Tasks/할 일.md', (0, dashboard_data_3.newDailyTask)(title.value, this.dashboard.selectedDay || (0, dashboard_data_3.localDay)(), (0, dashboard_data_3.localDay)(), crypto.randomUUID().slice(0, 8))); title.value = ''; title.focus(); }).finally(() => submit.disabled = false); }; }
     taskRow(parent, t) { const row = parent.createDiv({ cls: 'rd-task-row' + (t.done ? ' is-done' : '') }); const wrap = row.createEl('label', { cls: 'rd-task-check' }); const check = wrap.createEl('input', { type: 'checkbox', attr: { 'aria-label': `${t.title} ${t.done ? '완료 취소' : '완료'}` } }); check.checked = t.done; check.onchange = () => { check.disabled = true; void this.act(() => this.dashboard.toggle(t, row)).finally(() => check.disabled = false); }; const label = row.createDiv({ cls: 'rd-task-text' }); const edit = label.createEl('button', { text: t.title, cls: 'rd-task-label rd-task-edit', attr: { type: 'button', 'aria-label': t.title + ' 수정', 'aria-haspopup': 'dialog' } }); edit.onclick = () => new record_dialogs_1.TaskEditor(this.dashboard.app, this.dashboard.records, t, () => this.dashboard.refresh(t.path)).open(); if (!t.done && (0, dashboard_data_3.taskStart)(t) && (0, dashboard_data_3.taskStart)(t) < (this.dashboard.selectedDay || (0, dashboard_data_3.localDay)()) && (this.dashboard.selectedDay || (0, dashboard_data_3.localDay)()) <= (0, dashboard_data_3.localDay)() && t.path.startsWith('Tasks/'))
@@ -1867,7 +1887,7 @@ class ModuleView extends obsidian_1.MarkdownRenderChild {
                     const row = this.body.createDiv({ cls: 'rd-paper-row' });
                     const fm = this.dashboard.app.metadataCache.getFileCache(p)?.frontmatter;
                     row.dataset.reportId = String(fm?.report_id || '');
-                    this.link(row, p, String(fm?.library_title || p.basename));
+                    this.link(row, p, String(fm?.library_title || p.basename), false);
                 }
             }
             this.body.scrollTop = previousScroll;
@@ -2662,6 +2682,12 @@ class RemoteReceiver {
             const r = requests[0];
             if (!r)
                 return;
+            if (r.version === 1 && r.action === 'analyze-inbox') {
+                ledger[r.id] = (0, remote_data_1.statusFor)(r, 'cancelled', '이전 일괄 분석 요청은 실행하지 않습니다. Paper 보관함에서 분석할 PDF 한 편을 선택해 주세요.');
+                await this.store.writeLedger(ledger);
+                await this.store.writeStatus(ledger[r.id]);
+                return;
+            }
             if (Date.now() - Date.parse(r.createdAt) > 7 * 86400000) {
                 ledger[r.id] = (0, remote_data_1.statusFor)(r, 'cancelled', '7일 이상 지난 요청입니다. 오래된 작업의 자동 실행을 취소했습니다.');
                 await this.store.writeLedger(ledger);
@@ -2678,8 +2704,9 @@ class RemoteReceiver {
                 const fresh = await this.store.readLedger();
                 ledger[r.id] = fresh[r.id] && fresh[r.id].state !== 'dispatching' ? fresh[r.id] : { ...(0, remote_data_1.statusFor)(r, 'queued', 'Codex가 요청을 접수했습니다. 실제 작업 시작을 기다립니다.'), queueMessageId: messageId };
             }
-            catch {
-                ledger[r.id] = (0, remote_data_1.statusFor)(r, 'blocked', 'Codex 전달 결과를 확인하지 못했습니다. PC에서 확인해야 하며 자동 재전송하지 않습니다.');
+            catch (error) {
+                const cause = error instanceof Error ? error.message : 'Codex 연결을 확인해 주세요.';
+                ledger[r.id] = (0, remote_data_1.statusFor)(r, 'blocked', cause.slice(0, 700) + ' 자동으로 중복 분석하지 않습니다.');
             }
             await this.store.writeLedger(ledger);
             await this.store.writeStatus(ledger[r.id]);
@@ -2692,6 +2719,32 @@ class RemoteReceiver {
 exports.RemoteReceiver = RemoteReceiver;
 
 },
+"./codex-dispatch":(module,exports,require)=>{
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.resolveCodex = resolveCodex;
+exports.dispatchFailure = dispatchFailure;
+/** Resolve on every submission: desktop updates remove the previous bin directory. */
+function resolveCodex(configured, bin, fs, path) {
+    if (fs.existsSync(configured))
+        return configured;
+    const resolved = path.resolve(configured).toLowerCase(), root = path.resolve(bin).toLowerCase();
+    if (path.basename(resolved) !== 'codex.exe' || !resolved.startsWith(root + path.sep))
+        throw Error('PC 분석 실행 파일 경로를 확인해 주세요.');
+    const candidates = fs.existsSync(bin) ? fs.readdirSync(bin, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => path.join(bin, d.name, 'codex.exe')).filter((p) => fs.existsSync(p)).sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs) : [];
+    if (!candidates.length)
+        throw Error('Codex 실행 파일이 없습니다. 앱 업데이트가 끝난 뒤 연결을 확인해 주세요.');
+    return candidates[0];
+}
+function dispatchFailure(error) {
+    if (error?.code === 'ENOENT')
+        return 'Codex 실행 파일이 변경되어 요청을 보내지 못했습니다.';
+    if (error?.killed || error?.code === 'ETIMEDOUT')
+        return 'Codex 전달 시간이 초과되었습니다. 중복 방지를 위해 자동 재전송하지 않습니다.';
+    return 'Codex 전달 결과를 확인하지 못했습니다. PC 확인이 필요하며 자동 재전송하지 않습니다.';
+}
+
+},
 "./remote-control":(module,exports,require)=>{
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -2699,6 +2752,7 @@ exports.PaperRemoteControl = void 0;
 const obsidian_1 = require("obsidian");
 const remote_data_1 = require("./remote-data");
 const remote_receiver_1 = require("./remote-receiver");
+const codex_dispatch_1 = require("./codex-dispatch");
 const VIEW = 'paper-analysis-control';
 class PaperRemoteControl {
     constructor(plugin) {
@@ -2708,10 +2762,16 @@ class PaperRemoteControl {
         this.stopped = false;
         this.lastPull = 0;
         this.lastError = '';
+        this.managedGitSync = false;
+        this.lastSyncRequest = 0;
         plugin.registerView(VIEW, leaf => new ControlView(leaf, this));
         plugin.addCommand({ id: 'paper-analysis-control', name: '논문 분석 시작 · 상태 보기', callback: () => { void this.open(); } });
         plugin.addRibbonIcon('circle-play', '논문 분석 시작 · 상태 보기', () => { void this.open(); });
         plugin.registerObsidianProtocolHandler('paper-analysis', params => {
+            if (params.action === 'select') {
+                void this.plugin.openLibrary().catch((e) => this.error(e));
+                return;
+            }
             void this.open().then(() => params.action === 'sync' ? this.sync() : undefined).catch(e => this.error(e));
         });
         plugin.register(() => { this.stopped = true; });
@@ -2834,6 +2894,15 @@ class PaperRemoteControl {
         }
     }
     async sync() {
+        if (this.managedGitSync) {
+            if (Date.now() - this.lastSyncRequest < 10000)
+                return;
+            await new Promise((resolve, reject) => require('child_process').execFile('schtasks.exe', ['/Run', '/TN', 'ResearchVaultGitSync'], { windowsHide: true, timeout: 15000 }, (err) => err ? reject(Error('백그라운드 Git 동기화 작업을 시작하지 못했습니다.')) : resolve()));
+            this.lastSyncRequest = Date.now();
+            this.lastError = '';
+            await this.refresh();
+            return;
+        }
         const commands = this.plugin.app.commands;
         if (!commands?.commands?.['obsidian-git:push']) {
             new obsidian_1.Notice('요청은 저장됐습니다. GitSync에서 동기화하면 PC에 전달됩니다.');
@@ -2872,17 +2941,8 @@ class PaperRemoteControl {
                 return;
             if (c.version !== 1 || !remote_data_1.UUID.test(c.thread) || ![c.codex, c.runbook, c.workspace].every(p => typeof p === 'string' && path.isAbsolute(p)) || ![c.runbook, c.workspace].every(p => fs.existsSync(p)))
                 throw Error('PC 분석 연결 설정을 확인해 주세요.');
-            let codexExecutable = c.codex;
-            if (!fs.existsSync(codexExecutable)) {
-                const bin = path.join(os.homedir(), 'AppData', 'Local', 'OpenAI', 'Codex', 'bin');
-                const configured = path.resolve(c.codex).toLowerCase();
-                if (path.basename(configured) !== 'codex.exe' || !configured.startsWith(bin.toLowerCase() + path.sep))
-                    throw Error('PC 분석 실행 파일을 찾지 못했습니다.');
-                const candidates = fs.existsSync(bin) ? fs.readdirSync(bin, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => path.join(bin, d.name, 'codex.exe')).filter((p) => fs.existsSync(p)).sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs) : [];
-                if (!candidates.length)
-                    throw Error('Codex 앱 실행 파일을 찾지 못했습니다.');
-                codexExecutable = candidates[0];
-            }
+            const bin = path.join(os.homedir(), 'AppData', 'Local', 'OpenAI', 'Codex', 'bin');
+            this.managedGitSync = c.gitSyncOwner === 'scheduled-task';
             const ledgerPath = path.join(root, 'mobile-control-ledger.json');
             const a = this.plugin.app.vault.adapter;
             await this.ensure();
@@ -2897,9 +2957,17 @@ class PaperRemoteControl {
                 writeLedger: async (l) => atomic(ledgerPath, l)
             };
             this.receiver = new remote_receiver_1.RemoteReceiver(store, c, (thread, message) => new Promise((resolve, reject) => {
+                let codexExecutable;
+                try {
+                    codexExecutable = (0, codex_dispatch_1.resolveCodex)(c.codex, bin, fs, path);
+                }
+                catch (e) {
+                    reject(e);
+                    return;
+                }
                 require('child_process').execFile(codexExecutable, ['queue', '--thread', thread, '--message', message], { cwd: c.workspace, windowsHide: true, timeout: 45000, maxBuffer: 65536, encoding: 'utf8' }, (err, stdout) => {
                     if (err) {
-                        reject(Error('Codex 연결을 확인해 주세요.'));
+                        reject(Error((0, codex_dispatch_1.dispatchFailure)(err)));
                         return;
                     }
                     const match = stdout.match(/Queued message ([0-9a-f-]{36}) for thread ([0-9a-f-]{36})/);
@@ -2919,7 +2987,7 @@ class PaperRemoteControl {
             if (this.receiver) {
                 await this.receiver.tick();
                 // Git polling is ordinary local code; no LLM wakes while the queue is empty.
-                if (Date.now() - this.lastPull > 60000) {
+                if (!this.managedGitSync && Date.now() - this.lastPull > 60000) {
                     this.lastPull = Date.now();
                     this.plugin.app.commands?.executeCommandById('obsidian-git:pull');
                 }

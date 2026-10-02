@@ -1,4 +1,5 @@
 /* The fixed top pair is independent from the three-column work area. */
+.rd-desktop{padding-bottom:48px!important;scroll-padding-bottom:48px}
 .rd-desktop-grid{
   grid-template-areas:'top top top' 'tasks weekly schedules' 'tasks projects meetings' 'tasks projects meetings' 'calendar queue papers';
   grid-template-rows:230px minmax(235px,1fr) minmax(110px,.7fr) minmax(110px,.7fr) 350px;

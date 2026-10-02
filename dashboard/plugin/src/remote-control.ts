@@ -2,16 +2,20 @@ import {ItemView,Notice,Platform,Plugin,TFile,WorkspaceLeaf} from 'obsidian';
 declare const require:(name:string)=>any;
 import {CONTROL,PDF_PATH,UUID,RunRequest,RunStatus,parseRequest,parseStatus,statusFor,STATES,TERMINAL} from './remote-data';
 import {RemoteReceiver,RemoteStore} from './remote-receiver';
+import {resolveCodex,dispatchFailure} from './codex-dispatch';
 const VIEW='paper-analysis-control';
-interface LocalConfig {version:1;enabled:boolean;thread:string;codex:string;runbook:string;workspace:string;}
+interface LocalConfig {version:1;enabled:boolean;thread:string;codex:string;runbook:string;workspace:string;gitSyncOwner?:'scheduled-task'|'obsidian';}
 export class PaperRemoteControl {
   private receiver:RemoteReceiver|null=null;private submitBusy=false;private stopped=false;private lastPull=0;
   private lastError='';
+  private managedGitSync=false;
+  private lastSyncRequest=0;
   constructor(private plugin:Plugin) {
     plugin.registerView(VIEW,leaf=>new ControlView(leaf,this));
     plugin.addCommand({id:'paper-analysis-control',name:'논문 분석 시작 · 상태 보기',callback:()=>{void this.open();}});
     plugin.addRibbonIcon('circle-play','논문 분석 시작 · 상태 보기',()=>{void this.open();});
     plugin.registerObsidianProtocolHandler('paper-analysis',params=>{
+      if(params.action==='select'){void (this.plugin as any).openLibrary().catch((e:unknown)=>this.error(e));return;}
       void this.open().then(()=>params.action==='sync'?this.sync():undefined).catch(e=>this.error(e));
     });
     plugin.register(()=>{this.stopped=true;});
@@ -72,6 +76,11 @@ export class PaperRemoteControl {
     }catch(e){this.error(e);throw e;}finally{this.submitBusy=false;await this.refresh();}
   }
   async sync():Promise<void> {
+    if(this.managedGitSync){
+      if(Date.now()-this.lastSyncRequest<10000)return;
+      await new Promise<void>((resolve,reject)=>require('child_process').execFile('schtasks.exe',['/Run','/TN','ResearchVaultGitSync'],{windowsHide:true,timeout:15000},(err:unknown)=>err?reject(Error('백그라운드 Git 동기화 작업을 시작하지 못했습니다.')):resolve()));
+      this.lastSyncRequest=Date.now();this.lastError='';await this.refresh();return;
+    }
     const commands=(this.plugin.app as any).commands;
     if(!commands?.commands?.['obsidian-git:push']){new Notice('요청은 저장됐습니다. GitSync에서 동기화하면 PC에 전달됩니다.');return;}
     // Command dispatch is not proof that push succeeded; remote receipt is authoritative.
@@ -94,15 +103,8 @@ export class PaperRemoteControl {
       const c:LocalConfig=JSON.parse(fs.readFileSync(configPath,'utf8'));
       if(!c.enabled)return;
       if(c.version!==1||!UUID.test(c.thread)||![c.codex,c.runbook,c.workspace].every(p=>typeof p==='string'&&path.isAbsolute(p))||![c.runbook,c.workspace].every(p=>fs.existsSync(p)))throw Error('PC 분석 연결 설정을 확인해 주세요.');
-      let codexExecutable=c.codex;
-      if(!fs.existsSync(codexExecutable)){
-        const bin=path.join(os.homedir(),'AppData','Local','OpenAI','Codex','bin');
-        const configured=path.resolve(c.codex).toLowerCase();
-        if(path.basename(configured)!=='codex.exe'||!configured.startsWith(bin.toLowerCase()+path.sep))throw Error('PC 분석 실행 파일을 찾지 못했습니다.');
-        const candidates=fs.existsSync(bin)?fs.readdirSync(bin,{withFileTypes:true}).filter((d:any)=>d.isDirectory()).map((d:any)=>path.join(bin,d.name,'codex.exe')).filter((p:string)=>fs.existsSync(p)).sort((a:string,b:string)=>fs.statSync(b).mtimeMs-fs.statSync(a).mtimeMs):[];
-        if(!candidates.length)throw Error('Codex 앱 실행 파일을 찾지 못했습니다.');
-        codexExecutable=candidates[0];
-      }
+      const bin=path.join(os.homedir(),'AppData','Local','OpenAI','Codex','bin');
+      this.managedGitSync=c.gitSyncOwner==='scheduled-task';
       const ledgerPath=path.join(root,'mobile-control-ledger.json');
       const a=this.plugin.app.vault.adapter;await this.ensure();
       const atomic=(filename:string,value:unknown)=>{const tmp=filename+'.tmp';fs.writeFileSync(tmp,JSON.stringify(value,null,2),'utf8');fs.renameSync(tmp,filename);};
@@ -115,8 +117,10 @@ export class PaperRemoteControl {
         writeLedger:async l=>atomic(ledgerPath,l)
       };
       this.receiver=new RemoteReceiver(store,c,(thread,message)=>new Promise((resolve,reject)=>{
+        let codexExecutable:string;
+        try{codexExecutable=resolveCodex(c.codex,bin,fs,path);}catch(e){reject(e);return;}
         require('child_process').execFile(codexExecutable,['queue','--thread',thread,'--message',message],{cwd:c.workspace,windowsHide:true,timeout:45000,maxBuffer:65536,encoding:'utf8'},(err:unknown,stdout:string)=>{
-          if(err){reject(Error('Codex 연결을 확인해 주세요.'));return;}
+          if(err){reject(Error(dispatchFailure(err)));return;}
           const match=stdout.match(/Queued message ([0-9a-f-]{36}) for thread ([0-9a-f-]{36})/);
           match&&match[2]===thread&&UUID.test(match[1])?resolve(match[1]):reject(Error('Codex 접수 확인을 받지 못했습니다.'));
         });
@@ -130,7 +134,7 @@ export class PaperRemoteControl {
       if(this.receiver){
         await this.receiver.tick();
         // Git polling is ordinary local code; no LLM wakes while the queue is empty.
-        if(Date.now()-this.lastPull>60000){this.lastPull=Date.now();(this.plugin.app as any).commands?.executeCommandById('obsidian-git:pull');}
+        if(!this.managedGitSync&&Date.now()-this.lastPull>60000){this.lastPull=Date.now();(this.plugin.app as any).commands?.executeCommandById('obsidian-git:pull');}
       }
       await this.refresh();
     }catch(e){const message=e instanceof Error?e.message:String(e);if(message!==this.lastError)this.error(e);}

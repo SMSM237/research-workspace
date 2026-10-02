@@ -20,7 +20,7 @@ python analyzer/install.py --vault "D:/Research Vault" --expected-remote "https:
 
 1. Vault의 `Paper/`에 PDF를 넣고 해당 파일의 `분석` 버튼을 누릅니다. 요청에는 상대 경로와 SHA-256이 기록되어 다른 PDF로 범위가 확장되지 않습니다. PC 접수는 순차적으로 처리합니다.
 2. `chat-dispatch.py claim`으로 작업을 하나 접수하고 `prepare-chat-job.py --job <ID>`를 실행합니다. 출력된 chat-packet에는 PDF, 고정 프롬프트, source-blocks, request가 들어갑니다.
-3. ChatGPT Chat의 사용 가능한 Latest Pro 모델에서 해당 자료를 분석하고 고정 프롬프트대로 Markdown과 이미지를 받습니다. Work GPT-6 Sol High에서 결과를 원문과 대조한 뒤 게시합니다. 모델의 실제 사용 여부는 각 실행 기록으로 확인해야 합니다. ChatGPT 구독/로그인 및 사용량 제한이 적용됩니다.
+3. ChatGPT Chat의 사용 가능한 Latest High 모델에서 해당 자료를 분석하고 고정 프롬프트대로 Markdown과 이미지를 받습니다. Work GPT-6 Sol High에서 결과를 원문과 대조한 뒤 게시합니다. 모델의 실제 사용 여부는 각 실행 기록으로 확인해야 합니다. ChatGPT 구독/로그인 및 사용량 제한이 적용됩니다.
 4. 설치 폴더의 `app`을 PYTHONPATH에 지정하고 다음 도구의 `--help`로 결과 검사/게시 명령을 확인합니다. `check`는 구조와 근거 식별자 검사이며, 사람 또는 승인된 Codex 검토의 과학적 검토를 대체하지 않습니다.
 
 ```powershell
