@@ -6,14 +6,14 @@ is Markdown. Unknown/duplicate/missing blocks fail closed instead of losing pros
 from pathlib import Path
 from datetime import datetime, timezone
 import copy, hashlib, json, re
-from .chat_exchange import load_sources, validate_response
+from .chat_exchange import load_sources, validate_response, attachment_filename
 from .analysis_pipeline import indexed_corpus
 from .build import atomic_write
 from .worker_runtime import atomic_json
 from .worker_queue import digest
 
 FORMAT = 'paper-markdown/1'
-PROMPT_VERSION = '2026-09-11.3'
+PROMPT_VERSION = '2026-10-02.1'
 HEADER = re.compile(r'^## [^\n]+ \{#([A-Za-z0-9_.()-]+)\}\s*$', re.M)
 REF = re.compile(r'\[@(D[0-9]+):([0-9]+):(image|B[0-9]{4}|text\|[^\]\n]+)\]')
 FIGREF = re.compile(r'\[@([A-Za-z][A-Za-z0-9_-]*)\]')
@@ -200,10 +200,10 @@ def publish_markdown(worker,job,path,chat_url,model_label,*,history=None,visual_
 
 def export_markdown_packet(job,destination):
     destination=Path(destination);destination.mkdir(parents=True,exist_ok=True)
-    inv,pages=load_sources(job);documents=[]
-    for doc in inv['documents']:
+    inv,pages=load_sources(job);documents=[];used=set()
+    for index,doc in enumerate(inv['documents']):
         if not re.fullmatch(r'D[0-9]+',doc['id']):raise ValueError('원문 식별자 오류')
-        rel=doc['id']+'.pdf';atomic_write(destination/rel,(Path(job['bundle'])/doc['original_path']).read_bytes())
+        rel=attachment_filename(job,doc,index,used);atomic_write(destination/rel,(Path(job['bundle'])/doc['original_path']).read_bytes())
         documents.append(dict(document_id=doc['id'],file=rel,sha256=doc['sha256'],pages=len(doc['pages'])))
     atomic_write(destination/'source-blocks.txt',indexed_corpus(pages).encode('utf-8'))
     prompt=(Path(__file__).parent/'resources/chat-analysis-prompt.md').read_bytes()

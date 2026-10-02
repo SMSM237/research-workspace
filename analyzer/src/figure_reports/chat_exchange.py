@@ -39,12 +39,31 @@ def load_sources(job):
     return inv,pages
 
 
+def attachment_filename(job, doc, index, used):
+    """Keep readable source names while preserving stable internal document IDs."""
+    names = job.get('source_names', [])
+    source = names[index] if index < len(names) and isinstance(names[index], str) else ''
+    source = re.split(r'[/\\]', source)[-1]
+    source = re.sub(r'[<>:"|?*\x00-\x1f]', '_', source)
+    stem = re.sub(r'\.pdf$', '', source, flags=re.I).strip(' .')
+    if not stem:
+        stem = 'Main paper' if index == 0 else f'Supplement {index}'
+    stem = stem[:140].rstrip(' .')
+    name = stem + '.pdf'
+    if name.casefold() in used:
+        name = f'{stem} ({doc["id"]}).pdf'
+    if name.casefold() in used:
+        raise ValueError('Duplicate attachment name')
+    used.add(name.casefold())
+    return name
+
+
 def export_packet(job,destination):
     destination=Path(destination);destination.mkdir(parents=True,exist_ok=True)
-    inv,pages=load_sources(job);documents=[]
-    for doc in inv['documents']:
+    inv,pages=load_sources(job);documents=[];used=set()
+    for index,doc in enumerate(inv['documents']):
         if not re.fullmatch(r'D[0-9]+',doc['id']):raise ValueError('잘못된 원문 식별자')
-        rel=doc['id']+'.pdf';raw=(Path(job['bundle'])/doc['original_path']).read_bytes();atomic_write(destination/rel,raw)
+        rel=attachment_filename(job,doc,index,used);raw=(Path(job['bundle'])/doc['original_path']).read_bytes();atomic_write(destination/rel,raw)
         documents.append({'document_id':doc['id'],'file':rel,'sha256':doc['sha256'],'pages':len(doc['pages'])})
     atomic_write(destination/'source-blocks.txt',indexed_corpus(pages).encode('utf-8'))
     atomic_json(destination/'response.schema.json',SCHEMA)

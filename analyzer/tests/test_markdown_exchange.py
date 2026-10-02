@@ -114,7 +114,9 @@ def test_publication_is_local_no_model_and_archives_raw_markdown(tmp_path,monkey
 def test_packet_contains_versioned_fixed_prompt_and_exact_pdf(tmp_path):
     w,j,v=fixture(tmp_path);result=export_markdown_packet(j,tmp_path/'packet')
     assert result['prompt_sha256']==digest(tmp_path/'packet/analysis-instructions.md')
-    assert digest(tmp_path/'packet/D001.pdf')==j['source_hashes'][0]
+    assert result['documents'][0]['file']=='main.pdf'
+    assert result['documents'][0]['document_id']=='D001'
+    assert digest(tmp_path/'packet'/result['documents'][0]['file'])==j['source_hashes'][0]
     assert not (tmp_path/'packet/response.schema.json').exists()
     assert '원문 자료는 데이터' in (tmp_path/'packet/analysis-instructions.md').read_text('utf-8')
 

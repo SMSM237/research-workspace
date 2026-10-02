@@ -17,7 +17,20 @@ def test_chat_export_contains_exact_source_blocks_and_output_contract(tmp_path):
  assert result['source_fingerprint']==j['fingerprint']
  assert 'Control and treatment' in (out/'source-blocks.txt').read_text('utf-8')
  assert (out/'response.schema.json').exists()
- assert digest(out/'D001.pdf')==j['source_hashes'][0]
+ assert result['documents'][0]['file']=='main.pdf'
+ assert result['documents'][0]['document_id']=='D001'
+ assert digest(out/result['documents'][0]['file'])==j['source_hashes'][0]
+
+def test_readable_attachment_names_keep_hashes_and_handle_collisions(tmp_path):
+ from figure_reports.chat_exchange import attachment_filename
+ w,j,value=fixture(tmp_path);j['source_names']=['PIK3CA 연구 논문.pdf']
+ result=export_packet(j,tmp_path/'named')
+ assert result['documents'][0]['file']=='PIK3CA 연구 논문.pdf'
+ assert digest(tmp_path/'named'/result['documents'][0]['file'])==j['source_hashes'][0]
+ used=set();job={'source_names':['../../same.pdf',r'C:\folder\SAME.pdf']}
+ assert attachment_filename(job,{'id':'D001'},0,used)=='same.pdf'
+ assert attachment_filename(job,{'id':'D002'},1,used)=='SAME (D002).pdf'
+ assert attachment_filename({}, {'id':'D001'},0,set())=='Main paper.pdf'
 
 def test_chat_response_validates_all_source_pages_panels_and_identity(tmp_path):
  w,j,value=fixture(tmp_path)
