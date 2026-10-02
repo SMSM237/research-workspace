@@ -1,0 +1,8 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+ <application>
+  <provider android:name="org.smsm.papercontrol.SyncFixtureControl" android:authorities="org.researchqa.widgetfixture.control" android:exported="true"/>
+  <provider android:name="org.smsm.papercontrol.SyncFixtureProvider" android:authorities="org.researchqa.widgetfixture.documents" android:permission="android.permission.MANAGE_DOCUMENTS" android:exported="true" android:grantUriPermissions="true">
+   <intent-filter><action android:name="android.content.action.DOCUMENTS_PROVIDER"/></intent-filter>
+  </provider>
+ </application>
+</manifest>

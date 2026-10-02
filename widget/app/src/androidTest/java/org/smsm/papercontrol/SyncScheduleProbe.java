@@ -25,6 +25,6 @@ public class SyncScheduleProbe extends Instrumentation {
    verify(!SyncBridge.backgroundSync(fail),"dispatch failure reported");verify(pref.getLong("git_failed",0)>0,"failure timestamp persisted");
    result.putString("stream","PASS "+checks+" native scheduler and dispatch checks\n");finish(0,result);
   }catch(Throwable e){result.putString("stream","FAIL "+e+"\n");finish(-1,result);}
-  finally{jobs.cancel(PeriodicSync.JOB_ID);jobs.cancel(71325);SharedPreferences.Editor edit=pref.edit().clear();for(Map.Entry<String,?> entry:saved.entrySet()){Object v=entry.getValue();String k=entry.getKey();if(v instanceof String)edit.putString(k,(String)v);else if(v instanceof Integer)edit.putInt(k,(Integer)v);else if(v instanceof Long)edit.putLong(k,(Long)v);else if(v instanceof Boolean)edit.putBoolean(k,(Boolean)v);else if(v instanceof Float)edit.putFloat(k,(Float)v);else if(v instanceof Set)edit.putStringSet(k,(Set<String>)v);}edit.commit();}
+  finally{jobs.cancel(PeriodicSync.JOB_ID);PostSyncRefresh.cancel(c);SharedPreferences.Editor edit=pref.edit().clear();for(Map.Entry<String,?> entry:saved.entrySet()){Object v=entry.getValue();String k=entry.getKey();if(v instanceof String)edit.putString(k,(String)v);else if(v instanceof Integer)edit.putInt(k,(Integer)v);else if(v instanceof Long)edit.putLong(k,(Long)v);else if(v instanceof Boolean)edit.putBoolean(k,(Boolean)v);else if(v instanceof Float)edit.putFloat(k,(Float)v);else if(v instanceof Set)edit.putStringSet(k,(Set<String>)v);}edit.commit();}
  }
 }

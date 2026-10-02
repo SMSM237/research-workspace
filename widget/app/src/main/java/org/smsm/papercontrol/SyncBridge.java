@@ -21,7 +21,7 @@ public final class SyncBridge {
   public static boolean backgroundSync(Context a){
     if(!useGitSync(a))return false;
     // Avoid repeated requests while the previous service dispatch is still fresh.
-    long now=System.currentTimeMillis();if(now-VaultStore.prefs(a).getLong("git_dispatched",0)<30000)return true;
+    long now=System.currentTimeMillis();if(now-VaultStore.prefs(a).getLong("git_dispatched",0)<30000){PostSyncRefresh.start(a);return true;}
     try{sync(a);return true;}catch(RuntimeException e){VaultStore.prefs(a).edit().putString("notice","동기화 요청 실패: "+e.getMessage()).apply();PaperWidget.refresh(a);return false;}
   }
   public static void sync(Context a){
@@ -35,7 +35,6 @@ public final class SyncBridge {
     }else obsidian(a,"sync");
     VaultStore.prefs(a).edit().putString("notice","동기화 요청 "+LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))).apply();
     }catch(RuntimeException e){VaultStore.prefs(a).edit().putLong("git_failed",System.currentTimeMillis()).apply();PaperWidget.refresh(a);throw e;}
-    JobScheduler jobs=(JobScheduler)a.getSystemService(Context.JOB_SCHEDULER_SERVICE);
-    jobs.schedule(new JobInfo.Builder(71325,new ComponentName(a,RefreshJob.class)).setMinimumLatency(10000).setOverrideDeadline(60000).build());
+    PostSyncRefresh.start(a);
   }
 }

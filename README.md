@@ -8,12 +8,12 @@ Windows PC, Mac, Android에서 같은 연구 노트를 사용하기 위한 개�
 |---|---|---|
 | 대시보드 / Figure First Reader | 0.7.11 | 분석 대기 카드에서 원본 PDF 폴더 열기, 카드별 독립 갱신, 개별 PDF 분석 버튼, 3D 그래프, PC·모바일 홈 |
 | 논문 분석 구성 | 2026.09.15 | PDF 대기열, 고정 Chat 프롬프트, Markdown 검사, Markdown/HTML 리포트, PC 요청 연결 |
-| Android 연구 위젯 | 0.3.5 | 4×2 가변 위젯 APK, Java 소스와 테스트 |
+| Android 연구 위젯 | 0.3.6 | 4×2 가변 위젯 APK, 지연 동기화 후 목록 갱신, Java 소스와 테스트 |
 
 ## 다운로드와 시작
 
 - [최신 소스·설치 구성 ZIP](https://github.com/SMSM237/research-workspace/archive/refs/heads/main.zip): 처음 설치하는 경우 선택하세요.
-- [Android APK](downloads/Research-Widget-0.3.5.apk): 기존 앱을 업데이트하거나 위젯만 설치할 때 사용합니다.
+- [Android APK](downloads/Research-Widget-0.3.6.apk): 기존 앱 위에 설치하세요. Vault 연결과 기존 노트를 유지합니다.
 - [대시보드 설정](dashboard/README.md) · [논문 분석기 설정](analyzer/README.md) · [위젯 설정](widget/README.md)
 
 1. 패키지에서 **starter-vault 전체 폴더**를 개인 작업 위치에 복사하세요. 숨김 폴더 `.obsidian`도 포함해야 합니다.

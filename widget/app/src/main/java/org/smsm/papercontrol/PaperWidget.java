@@ -18,7 +18,13 @@ public class PaperWidget extends AppWidgetProvider {
  public static RemoteViews meetingRow(Context c,MeetingDocument d,boolean compact){RemoteViews r=rowBase(c,d.when()+"  ·  "+d.title,d.done,compact);r.setContentDescription(R.id.task_toggle,(d.done?"회의 미완료로 변경: ":"회의 완료: ")+d.title);r.setContentDescription(R.id.task_title,d.when()+" "+d.title+", 회의 노트 열기");r.setOnClickFillInIntent(R.id.task_toggle,new Intent().putExtra("action","meeting-toggle").putExtra("key",d.path).putExtra("raw",TaskDocument.hash(d.raw)));r.setOnClickFillInIntent(R.id.task_title,new Intent().putExtra("action","meeting-open").putExtra("key",d.path));return r;}
  private static RemoteViews rowBase(Context c,String title,boolean done,boolean compact){RemoteViews r=new RemoteViews(c.getPackageName(),compact?R.layout.task_row_compact:R.layout.task_row);r.setTextViewText(R.id.task_title,title);r.setTextColor(R.id.task_title,Color.parseColor(done?"#5D6D63":"#20372D"));r.setInt(R.id.task_title,"setPaintFlags",done?17:1);r.setImageViewResource(R.id.task_toggle,done?R.drawable.check_done:R.drawable.check_empty);return r;}
  public static void refresh(Context c){new Thread(()->updateAll(c.getApplicationContext()),"widget-refresh").start();}
- public static synchronized void updateAll(Context c){PeriodicSync.schedule(c);if(WidgetFeedback.isBusy())return;AppWidgetManager m=AppWidgetManager.getInstance(c);for(int id:m.getAppWidgetIds(new ComponentName(c,PaperWidget.class)))update(c,m,id);}
+ private static final android.os.Handler REFRESH_MAIN=new android.os.Handler(android.os.Looper.getMainLooper());
+ private static final java.util.concurrent.atomic.AtomicBoolean DEFERRED_REFRESH=new java.util.concurrent.atomic.AtomicBoolean();
+ public static synchronized void updateAll(Context c){PeriodicSync.schedule(c);if(WidgetFeedback.isBusy()){
+  if(DEFERRED_REFRESH.compareAndSet(false,true))REFRESH_MAIN.postDelayed(()->{DEFERRED_REFRESH.set(false);refresh(c);},800);
+  return;
+ }AppWidgetManager m=AppWidgetManager.getInstance(c);for(int id:m.getAppWidgetIds(new ComponentName(c,PaperWidget.class)))update(c,m,id);
+ VaultStore.prefs(c).edit().putLong("widget_last_read",System.currentTimeMillis()).apply();}
  @Override public void onEnabled(Context c){PeriodicSync.schedule(c);}
  @Override public void onDisabled(Context c){PeriodicSync.cancel(c);}
  static void update(Context c,AppWidgetManager m,int id){VaultStore store=new VaultStore(c);boolean meeting=meetings(c,id),compact=compact(c,id);List<TaskDocument.Task> tasks=new ArrayList<>();List<MeetingDocument> meetings=new ArrayList<>();String error="";try{if(meeting)meetings=store.meetings();else tasks=new TaskDocument(store.read(store.source())).today(VaultStore.day());}catch(Exception e){error=e instanceof SecurityException?"Vault 권한을 다시 연결해 주세요":e.getMessage();if(error==null)error="목록을 읽지 못했습니다.";}
